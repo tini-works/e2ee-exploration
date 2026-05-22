@@ -47,7 +47,7 @@ flowchart LR
     Provider --> SS["secret-storage<br/>(c3-103)"]
     Provider --> Patients["patients-domain<br/>(c3-104)"]
     Provider --> Wipe["local-wipe<br/>(c3-105)"]
-    Client --> SDK["matrix-js-sdk<br/>+ rust crypto"]
+    Client --> SDK["matrix-js-sdk<br/>+ @pumped-fn/lite-react"]
     SS --> SDK
     Patients --> SDK
     SDK <--> IDB[("IndexedDB")]
