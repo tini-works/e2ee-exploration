@@ -145,8 +145,8 @@ flowchart LR
     style App fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
     style BrowserZone fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
     style SynapseZone fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
-    style Gate fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
-    style Sdk fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
-    style ClinicFeatures fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
-    style PatientFeatures fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    style Gate fill:#ffffff,stroke:#000000,stroke-width:2px,color:#000000
+    style Sdk fill:#ffffff,stroke:#000000,stroke-width:2px,color:#000000
+    style ClinicFeatures fill:#ffffff,stroke:#000000,stroke-width:2px,color:#000000
+    style PatientFeatures fill:#ffffff,stroke:#000000,stroke-width:2px,color:#000000
 ```
