@@ -1,0 +1,40 @@
+c3-101:
+  - src/lib/matrix/client.ts
+c3-102:
+  - src/lib/matrix/provider.tsx
+c3-103:
+  - src/lib/matrix/secret-storage.ts
+c3-104:
+  - src/lib/matrix/patients.ts
+  - src/lib/matrix/types.ts
+c3-105:
+  - src/lib/matrix/wipe.ts
+c3-106:
+  - src/lib/config.ts
+c3-107:
+  - src/components/ui/**
+  - src/lib/utils.ts
+c3-110:
+  - src/components/sign-in.tsx
+c3-111:
+  - src/components/status-bar.tsx
+c3-112:
+  - src/components/app-shell.tsx
+  - src/components/full-page-loader.tsx
+c3-113:
+  - src/components/clinic-guard.tsx
+c3-114:
+  - src/components/patient-table.tsx
+c3-115:
+  - src/components/patient-detail.tsx
+c3-116:
+  - src/components/patient-account.tsx
+c3-117:
+  - src/app/globals.css
+  - src/app/layout.tsx
+  - src/app/page.tsx
+  - src/app/patients/**
+c3-118:
+  - src/app/pumped-fn/**
+c3-119:
+  - src/components/patient-form.tsx

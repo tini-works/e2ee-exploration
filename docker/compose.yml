@@ -1,0 +1,81 @@
+# Local Matrix Synapse homeserver for development.
+#
+# First-time setup (generates homeserver.yaml + signing keys into the
+# ./data volume; only run once):
+#
+#   docker compose -f docker/compose.yml run --rm synapse generate
+#
+# Then enable registration by editing docker/data/homeserver.yaml and
+# appending:
+#
+#   enable_registration: true
+#   enable_registration_without_verification: true
+#   # Optional: derive admin tokens
+#   registration_shared_secret: "dev-only-do-not-use-in-prod"
+#
+# Bring it up:
+#
+#   docker compose -f docker/compose.yml up -d
+#
+# Then point the app at http://localhost:8008. The default user-id suffix
+# becomes ":localhost", e.g. @alice:localhost.
+#
+# Create a first user (with the shared secret above):
+#
+#   docker compose -f docker/compose.yml exec synapse \
+#     register_new_matrix_user -u alice -p alicepass -a \
+#     -c /data/homeserver.yaml http://localhost:8008
+#
+# Tear down + keep data:        docker compose -f docker/compose.yml down
+# Tear down + wipe data:        docker compose -f docker/compose.yml down -v
+
+services:
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: matrix-synapse
+    restart: unless-stopped
+    environment:
+      SYNAPSE_SERVER_NAME: localhost
+      SYNAPSE_REPORT_STATS: "no"
+      UID: "1000"
+      GID: "1000"
+    volumes:
+      - synapse_data:/data
+    ports:
+      - "8008:8008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - matrix
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8008/_matrix/client/versions || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: matrix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: synapse_dev_password
+      POSTGRES_DB: synapse
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - matrix
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  synapse_data:
+  postgres_data:
+
+networks:
+  matrix:
