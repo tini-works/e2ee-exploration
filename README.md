@@ -55,15 +55,15 @@ flowchart TB
     Crypto <--> Rooms
     Crypto <--> Account
 
-    classDef leaf fill:#0b1220,stroke:#ec4899,stroke-width:1.5px,color:#f9a8d4
-    classDef userNode fill:#1a0a14,stroke:#ec4899,stroke-width:2px,color:#fbcfe8
+    classDef leaf fill:#ffffff,stroke:#ec4899,stroke-width:1.5px,color:#9d174d
+    classDef userNode fill:#ffffff,stroke:#ec4899,stroke-width:2px,color:#9d174d
 
-    style App fill:#0a0f1e,stroke:#22d3ee,stroke-width:2px,color:#a5f3fc
-    style BrowserZone fill:#0a0f1e,stroke:#22d3ee,stroke-width:2px,color:#a5f3fc
-    style SynapseZone fill:#0a0f1e,stroke:#22d3ee,stroke-width:2px,color:#a5f3fc
-    style Gate fill:#0a0f1e,stroke:#f59e0b,stroke-width:2px,color:#fcd34d
-    style Sdk fill:#0a0f1e,stroke:#f59e0b,stroke-width:2px,color:#fcd34d
-    style Features fill:#0a0f1e,stroke:#f59e0b,stroke-width:2px,color:#fcd34d
+    style App fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
+    style BrowserZone fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
+    style SynapseZone fill:#ffffff,stroke:#22d3ee,stroke-width:2px,color:#155e75
+    style Gate fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    style Sdk fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
+    style Features fill:#ffffff,stroke:#f59e0b,stroke-width:2px,color:#92400e
 ```
 
 See `docs/v1.md` for per-flow sequence diagrams.

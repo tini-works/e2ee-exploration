@@ -6,7 +6,7 @@ export type Clinic = {
 export const CLINICS: Clinic[] = [
   {
     name: "Universitätsklinikum Hamburg-Eppendorf",
-    userId: "@quochuydev.matrix:matrix.org",
+    userId: "@silenteer.matrix:matrix.org",
   },
 ];
 
