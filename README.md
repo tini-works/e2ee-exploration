@@ -159,7 +159,7 @@ sequenceDiagram
     SDK-->>Core: valid
     Core->>SDK: bootstrapCrossSigning
     Core->>SDK: crossSignDevice(deviceId)
-    Note over Core,SDK: bootstrap is a no-op when CS already<br/>exists; sign this device explicitly so it<br/>appears verified to itself and to peers
+    Note over Core,SDK: bootstrap is a no-op when CS already exists; sign this device explicitly so it appears verified to itself and to peers
     Core->>SDK: checkKeyBackupAndEnable
     SDK->>HS: GET /room_keys/version
     HS-->>SDK: backup version
@@ -193,7 +193,7 @@ sequenceDiagram
     HS-->>SDK: room_id
     Patients->>SDK: setRoomTag(roomId, PATIENT_TAG)
     Patients->>SDK: getUserDeviceInfo(self + invitees)
-    Note over Patients,SDK: Prime megolm session for every device<br/>that must decrypt the first event
+    Note over Patients,SDK: Prime megolm session for every device that must decrypt the first event
     Patients->>SDK: sendEvent(PATIENT_RECORD)
     SDK->>SDK: megolm encrypt
     SDK->>HS: PUT /send/{type}/{txn}

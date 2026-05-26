@@ -116,10 +116,10 @@ sequenceDiagram
   UI->>MC: unlockWithSecurityKey key
   MC->>SDK: decodeRecoveryKey
   MC->>SS: getDefaultKeyId + checkKey
-  Note over MC: caches key in module-local<br/>getSecretStorageKey callback
+  Note over MC: caches key in module-local getSecretStorageKey callback
   MC->>SDK: bootstrapCrossSigning
   MC->>SDK: crossSignDevice deviceId
-  Note over MC,SDK: bootstrap is a no-op if CS already exists<br/>so we sign this device explicitly
+  Note over MC,SDK: bootstrap is a no-op if CS already exists so we sign this device explicitly
   MC->>KB: checkKeyBackupAndEnable
   MC->>SDK: loadSessionBackupPrivateKeyFromSecretStorage
   MC->>KB: restoreKeyBackup
