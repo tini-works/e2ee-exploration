@@ -159,7 +159,7 @@ sequenceDiagram
     SDK-->>Core: valid
     Core->>SDK: bootstrapCrossSigning
     Core->>SDK: crossSignDevice(deviceId)
-    Note over Core,SDK: bootstrap is a no-op when CS already exists; sign this device explicitly so it appears verified to itself and to peers
+    Note over Core,SDK: bootstrap is a no-op when CS already exists — sign this device explicitly so it appears verified to itself and to peers
     Core->>SDK: checkKeyBackupAndEnable
     SDK->>HS: GET /room_keys/version
     HS-->>SDK: backup version
