@@ -1,9 +1,5 @@
 # Matrix Patient Records
 
-End-to-end encrypted patient records built on top of Matrix. Each patient is a
-private encrypted room; profile data lives in an `m.thread`, messages live in
-the room timeline.
-
 ## Architecture
 
 ```mermaid
@@ -103,16 +99,6 @@ See `docs/v1.md` for per-flow sequence diagrams.
 
 ## Package interactions
 
-The repo is a npm workspace with two packages:
-
-- **`web/`** — Next.js app. Owns UI, routing, app-domain config (clinics), and copy. Talks to Matrix only through `matrix-client`.
-- **`packages/matrix-client/`** — Matrix wrapper. Three entrypoints:
-  - `matrix-client` — core (`createMatrixClient`, `loginWithPassword`, `unlockWithSecurityKey`, `wipeLocalMatrixData`, …)
-  - `matrix-client/react` — `MatrixProvider`, `useMatrix`, `usePatientInvites`
-  - `matrix-client/patients` — domain helpers (`createPatient`, `listPatients`, `subscribeRooms`, …)
-
-The package depends on `matrix-js-sdk`; the web app never imports `matrix-js-sdk` directly.
-
 ### Sign in and session bootstrap
 
 ```mermaid
@@ -140,8 +126,6 @@ sequenceDiagram
     Core-->>Hook: client
     Hook-->>UI: ready=false<br/>notReadyReason={kind:"needs_recovery_key"}
 ```
-
-The provider blocks `ready` on `keyUnlockedThisSession` until the user proves they hold the recovery key — see next diagram.
 
 ### Unlock recovery key (the access gate)
 
@@ -173,8 +157,6 @@ sequenceDiagram
     Hook-->>UI: ready=true, notReadyReason=null
 ```
 
-`notReadyReason` is a typed union from `matrix-client/react`. The web app's `notReadyMessage()` helper converts it to user-facing copy — copy lives in the app, not the package.
-
 ### Create patient (mutation with E2EE)
 
 ```mermaid
@@ -203,93 +185,7 @@ sequenceDiagram
     Patients-->>UI: roomId
 ```
 
-`patient-form.tsx` only knows about the typed `PatientRecord` shape and the `createPatient` call — it never touches `matrix-js-sdk` types directly. The same pattern applies to `updatePatient`, `sendMessage`, `deletePatient`, etc.
-
 ## TI-Messenger reference architecture
-
-For comparison, this is gematik's TI-Messenger system overview — the German
-healthcare Matrix federation this project could one day plug into.
-
-```mermaid
-flowchart LR
-    subgraph CLIENT[" "]
-        direction TB
-        TMC[TI-Messenger-Client]
-        OAC[Org-Admin-Client]
-        FRD[Frontend des<br/>Registrierungs-Dienstes]
-    end
-
-    subgraph VZD[VZD-FHIR-Directory]
-        direction LR
-        FP[FHIR-Proxy]
-        FD[(FHIR-Directory)]
-        AS[Auth-Service]
-        OAUTH[OAuth]
-    end
-
-    subgraph FACH[TI-Messenger-Fachdienst]
-        direction TB
-        RD[Registrierungs-Dienst]
-        PG[Push-Gateway]
-        subgraph MS[Messenger-Service]
-            direction LR
-            MP[Messenger-Proxy]
-            MH[Matrix-Homeserver]
-        end
-    end
-
-    IDP[Zentraler<br/>IDP-Dienst]
-    subgraph FACH2[TI-Messenger-Fachdienst]
-        F2[ peer provider ]
-    end
-    AUTH[Authentifizierungsdienst]
-
-    TMC -- "Matrix – Client Server API" --> MP
-    TMC -- "I_TiMessengerContactManagement" --> MP
-    TMC -- "I_Registration" --> RD
-    FRD -- "I_Registration" --> RD
-    OAC -- "I_requestToken" --> RD
-
-    MP <-- "HTTP(S) forward" --> MH
-    RD -- "I_internVerification" --> MS
-
-    RD -- "FHIRDirectoryTIMProviderAPI" --> FP
-    FP --- FD
-    FP --- AS
-    AS --- OAUTH
-    TMC -- "FHIRDirectorySearchAPI" --> FP
-    OAC -- "FHIRDirectoryOwnerAPI" --> FP
-
-    AS -- "OIDC" --> IDP
-    RD -- "OIDC" --> IDP
-
-    MH <-- "Matrix – Server Server API" --> FACH2
-
-    TMC -- "Authentifizierungsverfahren" --> AUTH
-    FACH -- "Authentifizierungsverfahren" --> AUTH
-
-    classDef green    fill:#d4e8c8,stroke:#6b9c4e,color:#000
-    classDef orange   fill:#fde2cc,stroke:#d97f3e,color:#000
-    classDef blue     fill:#cfe2ef,stroke:#4a90b8,color:#000
-    classDef darkblue fill:#a8c8dc,stroke:#3a7a9c,color:#000
-    classDef gray     fill:#ececec,stroke:#888,color:#000
-
-    class TMC,OAC,FRD green
-    class FP,FD,AS,OAUTH orange
-    class RD,PG blue
-    class MP,MH darkblue
-    class IDP,AUTH,F2 gray
-
-    style CLIENT fill:#d4e8c8,stroke:#6b9c4e
-    style VZD    fill:#fde2cc,stroke:#d97f3e
-    style FACH   fill:#cfe2ef,stroke:#4a90b8
-    style MS     fill:#a8c8dc,stroke:#3a7a9c
-    style FACH2  fill:#cfe2ef,stroke:#4a90b8
-```
-
-Source: [gematik/api-ti-messenger](https://github.com/gematik/api-ti-messenger).
-
-### English translation
 
 Same diagram with the German labels translated, for readers unfamiliar
 with the gematik terminology.
@@ -371,27 +267,4 @@ flowchart LR
     style FACH2  fill:#cfe2ef,stroke:#4a90b8
 ```
 
-Glossary:
-
-- **VZD** (*Verzeichnisdienst*) — Directory Service. The federation-wide
-  FHIR directory of organizations and users.
-- **Fachdienst** — literally "specialist service"; in gematik terms it
-  means a provider-operated service that participates in the TI
-  federation. Each TI-Messenger Fachdienst runs its own Matrix homeserver.
-- **Registrierungs-Dienst** — Registration Service. Registers users and
-  organizations against the directory before they can use the messenger.
-- **IDP-Dienst** — Identity Provider Service. The central OIDC issuer
-  shared across the federation.
-- **Authentifizierungsverfahren** — Authentication procedure (the actual
-  method by which a client proves identity to the IDP).
-
-## Development
-
-```bash
-docker compose up -d   # local Synapse homeserver
-pnpm install
-pnpm dev
-```
-
-First session generates a recovery key (shown once). Subsequent sessions must
-enter that key on sign-in — no feature is usable until the key is verified.
+Source: [gematik/api-ti-messenger](https://github.com/gematik/api-ti-messenger).

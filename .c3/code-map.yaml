@@ -1,0 +1,42 @@
+c3-101:
+  - web/src/lib/utils.ts
+c3-102:
+  - web/src/lib/config.ts
+c3-103:
+  - web/src/lib/not-ready-message.ts
+c3-105:
+  - web/src/components/clinic-guard.tsx
+c3-106:
+  - web/src/components/full-page-loader.tsx
+c3-110:
+  - web/src/components/sign-in.tsx
+c3-111:
+  - web/src/components/status-bar.tsx
+c3-112:
+  - web/src/components/patient-table.tsx
+c3-113:
+  - web/src/components/patient-detail.tsx
+c3-114:
+  - web/src/components/patient-form.tsx
+c3-115:
+  - web/src/components/patient-account.tsx
+c3-116:
+  - web/src/app/**
+c3-201:
+  - packages/matrix-client/src/client.ts
+c3-202:
+  - packages/matrix-client/src/types.ts
+c3-203:
+  - packages/matrix-client/src/secret-storage.ts
+c3-204:
+  - packages/matrix-client/src/wipe.ts
+c3-205:
+  - packages/matrix-client/src/react/verification.ts
+c3-206:
+  - packages/matrix-client/src/react/peer-key-share.ts
+c3-210:
+  - packages/matrix-client/src/patients.ts
+c3-211:
+  - packages/matrix-client/src/react/provider.tsx
+c3-212:
+  - packages/matrix-client/src/react/invites.ts
