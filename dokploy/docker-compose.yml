@@ -1,54 +1,48 @@
 # Matrix Synapse homeserver for Dokploy (compose app).
 #
-# Required env vars (set these in Dokploy's "Environment" tab):
-#   SYNAPSE_DOMAIN          public domain, e.g. matrix.example.com
-#   SYNAPSE_SERVER_NAME     server_name baked into user IDs (usually = SYNAPSE_DOMAIN)
-#   POSTGRES_PASSWORD       strong random string
+# Postgres is a SEPARATE Dokploy "Database" app (Dokploy provisions the role +
+# database for you, so there's no manual role creation). This compose is just
+# synapse; it connects to that database over dokploy-network.
+#
+# The image is built from ./Dockerfile, which bakes in synapse-entrypoint.sh —
+# it renders /data/homeserver.yaml from env vars on first boot, generates the
+# signing key, then starts synapse.
+#
+# Set in Dokploy's Environment tab:
+#   SYNAPSE_DOMAIN               public domain (Traefik route)
+#   SYNAPSE_SERVER_NAME          server_name baked into user IDs (usually = SYNAPSE_DOMAIN)
 #   REGISTRATION_SHARED_SECRET   used by register_new_matrix_user
+#   POSTGRES_HOST                the Dokploy database's internal host
+#   POSTGRES_PASSWORD            the Dokploy database's password
+#   POSTGRES_USER                optional, defaults to "synapse"
+#   POSTGRES_DB                  optional, defaults to "synapse"
+#   POSTGRES_PORT                optional, defaults to 5432
 #
-# First-time setup (run once from Dokploy's terminal to generate homeserver.yaml
-# + signing keys into the synapse_data volume):
-#
-#   docker compose run --rm synapse generate
-#
-# Then edit /data/homeserver.yaml inside the synapse_data volume so it points at
-# Postgres and enables registration:
-#
-#   database:
-#     name: psycopg2
-#     args:
-#       user: synapse
-#       password: ${POSTGRES_PASSWORD}
-#       database: synapse
-#       host: postgres
-#       cp_min: 5
-#       cp_max: 10
-#   enable_registration: true
-#   enable_registration_without_verification: true
-#   registration_shared_secret: "${REGISTRATION_SHARED_SECRET}"
-#
-# Redeploy from Dokploy. Create the first user with:
-#
-#   docker compose exec synapse register_new_matrix_user \
-#     -u alice -p alicepass -a -c /data/homeserver.yaml http://localhost:8008
+# Create the first user from Dokploy's web terminal:
+#   register_new_matrix_user -u alice -p alicepass -a \
+#     -c /data/homeserver.yaml http://localhost:8008
 
 services:
   synapse:
-    image: matrixdotorg/synapse:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       SYNAPSE_SERVER_NAME: ${SYNAPSE_SERVER_NAME}
-      SYNAPSE_REPORT_STATS: "no"
+      REGISTRATION_SHARED_SECRET: ${REGISTRATION_SHARED_SECRET}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-synapse}
+      POSTGRES_DB: ${POSTGRES_DB:-synapse}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      # Run synapse as 1000:1000 to match the chown in synapse-entrypoint.sh.
       UID: "1000"
       GID: "1000"
     volumes:
       - synapse_data:/data
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - dokploy-network
-      - matrix
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8008/_matrix/client/versions || exit 1"]
       interval: 10s
@@ -62,29 +56,9 @@ services:
       - traefik.http.routers.synapse.tls.certresolver=letsencrypt
       - traefik.http.services.synapse.loadbalancer.server.port=8008
 
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: synapse
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: synapse
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - matrix
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
 volumes:
   synapse_data:
-  postgres_data:
 
 networks:
   dokploy-network:
     external: true
-  matrix:

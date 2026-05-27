@@ -1,102 +1,54 @@
 # Deploy Synapse on Dokploy
 
-Step-by-step guide for deploying `dokploy-compose.yml` as a Compose app on a Dokploy server.
+Deploy `dokploy/docker-compose.yml` as a Compose app. Config is rendered from
+env vars at startup, so there's nothing to generate or hand-edit.
 
 ## 1. DNS
 
-Point an A record at your Dokploy server, e.g. `matrix.example.com → <server IP>`.
+Point an A record at the Dokploy server: `matrix.example.com → <server IP>`.
 
 ## 2. Create the app
 
-Dokploy → your project → **Create Service** → **Compose** → name it (e.g. `matrix`).
+Dokploy → project → **Create Service** → **Compose**. Point it at this repo,
+Compose Path `dokploy/docker-compose.yml`.
 
-## 3. Provider: Git or Raw
-
-- **Git**: point it at this repo, set Compose Path to `docker/dokploy-compose.yml`.
-- **Raw**: paste the contents of `docker/dokploy-compose.yml` into the editor.
-
-## 4. Environment tab
-
-Add:
+## 3. Environment
 
 ```
 SYNAPSE_DOMAIN=matrix.example.com
 SYNAPSE_SERVER_NAME=matrix.example.com
-POSTGRES_PASSWORD=<long random string>
-REGISTRATION_SHARED_SECRET=<another long random string>
+POSTGRES_PASSWORD=<openssl rand -hex 32>
+REGISTRATION_SHARED_SECRET=<openssl rand -hex 32>
 ```
 
-- `SYNAPSE_DOMAIN` — public hostname Traefik routes to Synapse.
-- `SYNAPSE_SERVER_NAME` — identity baked into user IDs (`@alice:matrix.example.com`). Usually equal to `SYNAPSE_DOMAIN`. Don't change after first deploy.
+`SYNAPSE_SERVER_NAME` is baked into user IDs (`@alice:matrix.example.com`) —
+don't change it after the first deploy.
 
-## 5. Domains tab
+## 4. Deploy
 
-Add `matrix.example.com`, service `synapse`, port `8008`, HTTPS on, Let's Encrypt.
+Click **Deploy**. Dokploy builds the image, the entrypoint renders
+`/data/homeserver.yaml` + signing key from the env vars, then synapse starts.
+Wait for the healthcheck to go green.
 
-This duplicates the Traefik labels in the compose file — pick one. If you use the UI, you can delete the `traefik.*` labels from the compose.
+## 5. Create the first user
 
-## 6. Deploy
-
-Click **Deploy**. Synapse will fail the first time — that's expected, it has no config yet.
-
-## 7. Generate config (one-time)
-
-Dokploy → service → **Terminal** (or SSH to the server) and run:
+Dokploy → service → **Terminal**:
 
 ```
-docker compose run --rm synapse generate
-```
-
-## 8. Edit `homeserver.yaml`
-
-From the same terminal:
-
-```
-docker compose run --rm synapse sh -c "vi /data/homeserver.yaml"
-```
-
-Replace the `database:` block and add registration settings:
-
-```yaml
-database:
-  name: psycopg2
-  args:
-    user: synapse
-    password: ${POSTGRES_PASSWORD}
-    database: synapse
-    host: postgres
-    cp_min: 5
-    cp_max: 10
-
-enable_registration: true
-enable_registration_without_verification: true
-registration_shared_secret: "${REGISTRATION_SHARED_SECRET}"
-```
-
-Save.
-
-## 9. Redeploy
-
-Hit **Deploy** again. Wait for the healthcheck to go green.
-
-## 10. Create first user
-
-```
-docker compose exec synapse register_new_matrix_user \
-  -u alice -p alicepass -a \
+register_new_matrix_user -u alice -p alicepass -a \
   -c /data/homeserver.yaml http://localhost:8008
 ```
 
-## 11. Verify
+## 6. Verify
 
 ```
 curl https://matrix.example.com/_matrix/client/versions
 ```
 
-Should return JSON. Point your client at `https://matrix.example.com`.
+Returns JSON. Point your client at `https://matrix.example.com`.
 
-## Prerequisites recap
+## Prerequisites
 
-- DNS A/AAAA record for `SYNAPSE_DOMAIN` pointing at the Dokploy server.
-- Ports 80 + 443 reachable on the server (Let's Encrypt HTTP-01 challenge).
-- `dokploy-network` exists on the server (created automatically by Dokploy on install).
+- DNS A record for `SYNAPSE_DOMAIN` at the Dokploy server.
+- Ports 80 + 443 reachable (Let's Encrypt).
+- `dokploy-network` exists (Dokploy creates it on install).
