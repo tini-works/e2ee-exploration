@@ -35,6 +35,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# synapse runtime secrets + local config — never commit (any location)
+**/homeserver.yaml
+**/*.signing.key
+**/synapse.key
+**/synapse.config
+
 # vercel
 .vercel
 
