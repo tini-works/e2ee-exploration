@@ -14,10 +14,11 @@ flowchart LR
     B3(["unlockWithSecurityKey<br/>recovery key to all keys loaded"]):::orange
     B4(["generateRecoveryKey"]):::orange
     B5(["wipeLocalMatrixData<br/>nuke all browser state"]):::orange
-    B6(["MatrixProvider + useMatrix<br/>React lifecycle + sync state"]):::cyan
+    B6(["MatrixProvider + useMatrix<br/>React binding over state scope"]):::cyan
     B7(["createPatient / updatePatient<br/>rooms-as-records"]):::cyan
     B8(["usePatientInvites"]):::cyan
     B9(["requestKeyFromPeers<br/>cross-device session forwarding for UTDs"]):::orange
+    B10(["signIn / signOut / resetBackup / markKeyUnlocked<br/>imperative state actions on pumped-fn atoms"]):::orange
   end
 
   subgraph SDK["matrix-js-sdk"]
@@ -38,7 +39,9 @@ flowchart LR
   B3 --> A5
   B4 --> A4
   B7 --> A1
-  B6 --> B1
+  B6 --> B10
+  B10 --> B1
+  B10 --> B2
   B9 --> A4
   B9 --> A1
 

@@ -34,6 +34,8 @@ c3-205:
   - packages/matrix-client/src/react/verification.ts
 c3-206:
   - packages/matrix-client/src/react/peer-key-share.ts
+c3-207:
+  - packages/matrix-client/src/state/**
 c3-210:
   - packages/matrix-client/src/patients.ts
 c3-211:

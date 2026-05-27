@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useMatrix } from "matrix-client/react";
+import { scopedValue, useScopedValue } from "@pumped-fn/lite-react";
+import { useMatrix, signIn } from "matrix-client/react";
 import {
   DEFAULT_HOMESERVER_URL,
   DEFAULT_IDENTITY_SERVER_URL,
@@ -12,32 +12,57 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-export function SignIn() {
-  const { signIn, status, error } = useMatrix();
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_HOMESERVER_URL);
-  const [identityServerUrl, setIdentityServerUrl] = useState(
-    DEFAULT_IDENTITY_SERVER_URL,
-  );
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+/**
+ * Sign-in form state lives in a pumped scopedValue (execution-scoped frontend
+ * state) rather than a pile of useState. The submit action drives the
+ * matrix-client signIn() directly.
+ */
+const signInForm = scopedValue({
+  name: "sign-in-form",
+  initial: () => ({
+    baseUrl: DEFAULT_HOMESERVER_URL,
+    identityServerUrl: DEFAULT_IDENTITY_SERVER_URL,
+    username: "",
+    password: "",
+    submitting: false,
+  }),
+  actions: ({ get, patch }) => ({
+    setBaseUrl: (baseUrl: string) => patch({ baseUrl }),
+    setIdentityServerUrl: (identityServerUrl: string) =>
+      patch({ identityServerUrl }),
+    setUsername: (username: string) => patch({ username }),
+    setPassword: (password: string) => patch({ password }),
+    async submit() {
+      const s = get();
+      patch({ submitting: true });
+      try {
+        await signIn({
+          baseUrl: s.baseUrl.trim(),
+          identityServerUrl: s.identityServerUrl.trim() || undefined,
+          username: s.username.trim(),
+          password: s.password,
+        });
+        toast.success(
+          "Signed in. Enter your recovery key from the status bar to unlock encrypted history.",
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        patch({ submitting: false });
+      }
+    },
+  }),
+});
 
-  const onSubmit = async (e: React.FormEvent) => {
+export function SignIn() {
+  const { status, error } = useMatrix();
+  const form = useScopedValue(signInForm);
+  const { baseUrl, identityServerUrl, username, password, submitting } =
+    form.snapshot;
+
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      await signIn({
-        baseUrl: baseUrl.trim(),
-        identityServerUrl: identityServerUrl.trim() || undefined,
-        username: username.trim(),
-        password,
-      });
-      toast.success("Signed in. Enter your recovery key from the status bar to unlock encrypted history.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
+    void form.actions.submit();
   };
 
   return (
@@ -58,7 +83,7 @@ export function SignIn() {
           <Input
             id="baseUrl"
             value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
+            onChange={(e) => form.actions.setBaseUrl(e.target.value)}
             required
           />
         </div>
@@ -67,7 +92,7 @@ export function SignIn() {
           <Input
             id="identityServerUrl"
             value={identityServerUrl}
-            onChange={(e) => setIdentityServerUrl(e.target.value)}
+            onChange={(e) => form.actions.setIdentityServerUrl(e.target.value)}
           />
         </div>
         <div className="space-y-2">
@@ -75,7 +100,7 @@ export function SignIn() {
           <Input
             id="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => form.actions.setUsername(e.target.value)}
             placeholder="@alice:matrix.org or alice"
             autoComplete="username"
             required
@@ -86,7 +111,7 @@ export function SignIn() {
           <PasswordInput
             id="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => form.actions.setPassword(e.target.value)}
             autoComplete="current-password"
             required
           />

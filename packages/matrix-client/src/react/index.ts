@@ -9,3 +9,9 @@ export {
 export { usePatientInvites } from "./invites";
 export { useDeviceVerification } from "./verification";
 export { usePeerKeyShareState } from "./peer-key-share";
+export {
+  signIn,
+  signOut,
+  resetBackup,
+  markKeyUnlocked,
+} from "../state/actions";

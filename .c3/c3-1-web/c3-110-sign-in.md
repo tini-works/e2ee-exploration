@@ -1,12 +1,13 @@
 ---
 id: c3-110
-c3-seal: cf6c1cfee430312828899ae35b0adc9b61bf0e8fcda01d7fd8063440e30ffca1
+c3-seal: f62da38ce83f5b835bd9c88eab4e5092f8039d745cb7f8130272db2ced3e2b60
 title: sign-in
 type: component
 category: feature
 parent: c3-1
 goal: Drive the only path into a fresh Matrix session. Renders the single sign-in form (homeserver, identity server, username, password), calls `useMatrix().signIn`, and surfaces a recovery-key hint toast on success so the user knows the status-bar unlock step is next.
 uses:
+    - ref-pumped-fn-state
     - ref-recovery-key
     - ref-toast-feedback
     - rule-no-confirm
@@ -25,14 +26,14 @@ Drive the only path into a fresh Matrix session. Renders the single sign-in form
 | Container | c3-1 |
 | Layer | feature |
 | Consumers | app-shell (c3-104). Rendered when provider status is idle or error. |
-| External deps | matrix-client/react (useMatrix), matrix-client (DEFAULT_HOMESERVER_URL, DEFAULT_IDENTITY_SERVER_URL), sonner. |
-| Persistence | None directly. signIn writes StoredSession to localStorage via the provider. |
+| External deps | matrix-client/react (useMatrix, standalone signIn), matrix-client (DEFAULT_HOMESERVER_URL, DEFAULT_IDENTITY_SERVER_URL), @pumped-fn/lite-react (scopedValue, useScopedValue), sonner. |
+| Persistence | None directly. signIn writes StoredSession to localStorage via c3-207. |
 
 ## Purpose
 
-Owns: the controlled form for `baseUrl`, `identityServerUrl`, `username`, `password`; the submit handler that calls `signIn({ baseUrl, identityServerUrl, username, password })`; submit-disabled state while connecting; success toast that nudges the user to enter the recovery key in the status-bar; error toast carrying the raw `signIn` error. File: `web/src/components/sign-in.tsx`.
+Owns: the sign-in form whose state lives in a pumped `scopedValue` (`sign-in-form`) holding `baseUrl`, `identityServerUrl`, `username`, `password`, `submitting` — not React `useState`; the form's `submit` action, which calls the standalone `signIn({ baseUrl, identityServerUrl, username, password })` imported from `matrix-client/react` (not `useMatrix().signIn`), flips `submitting`, and raises the success/error toast; field setters via `form.actions.set*`; the success toast that nudges the user to enter the recovery key in the status-bar. `useMatrix()` is still read for `status`/`error`. File: `web/src/components/sign-in.tsx`.
 
-Non-goals: secret-storage / recovery-key unlock (lives in c3-111 status-bar), session bootstrap (c3-211 matrix-provider), homeserver discovery beyond the package's `DEFAULT_*` constants.
+Non-goals: secret-storage / recovery-key unlock (lives in c3-111 status-bar), session bootstrap (c3-207 matrix-state / c3-211 matrix-provider), homeserver discovery beyond the package's `DEFAULT_*` constants.
 
 ## Foundational Flow
 
@@ -40,8 +41,8 @@ Non-goals: secret-storage / recovery-key unlock (lives in c3-111 status-bar), se
 | --- | --- | --- |
 | Precondition | Provider mounted; status not yet ready. | ref-key-gate |
 | Inputs | User-typed baseUrl, identityServerUrl, username, password. | ref-matrix-js-sdk |
-| State | Local useState for each field plus a submitting boolean. | ref-client-only |
-| Shared deps | useMatrix() for signIn, status, error; Button, Input, Label, PasswordInput from c3-101; toast from sonner. | ref-client-only |
+| State | A pumped scopedValue (sign-in-form) holds the four fields plus a submitting boolean; useScopedValue subscribes the component to its snapshot. | ref-pumped-fn-state |
+| Shared deps | standalone signIn from matrix-client/react; useMatrix() for status, error; scopedValue/useScopedValue from @pumped-fn/lite-react; Button, Input, Label, PasswordInput from c3-101; toast from sonner. | ref-pumped-fn-state |
 
 ## Business Flow
 
@@ -58,8 +59,9 @@ Non-goals: secret-storage / recovery-key unlock (lives in c3-111 status-bar), se
 | --- | --- | --- | --- | --- |
 | ref-recovery-key | ref | Post-sign-in nudge | hard | Success toast tells the user the recovery-key step happens in the status-bar. |
 | ref-toast-feedback | ref | Success + error toasts | hard | All transient feedback goes through sonner. |
+| ref-pumped-fn-state | ref | Form state | hard | Form state uses a scopedValue for component-local pumped state instead of useState, the component-local variant of the ref's pattern. |
 | rule-no-confirm | rule | Form-only UX | hard | No native dialogs; only the inline form and toasts. |
-| rule-no-direct-sdk-import | rule | Import boundary | hard | Imports come exclusively from matrix-client and matrix-client/react. |
+| rule-no-direct-sdk-import | rule | Import boundary | hard | Imports come from matrix-client, matrix-client/react, and @pumped-fn/lite-react — never matrix-js-sdk directly. |
 | rule-toast-error-shape | rule | Error toast shape | hard | Currently uses single-arg form; the rule's headline + description shape is the target. |
 
 ## Contract

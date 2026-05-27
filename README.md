@@ -105,7 +105,7 @@ See `docs/v1.md` for per-flow sequence diagrams.
 sequenceDiagram
     autonumber
     participant UI as web/sign-in.tsx
-    participant Hook as matrix-client/react<br/>MatrixProvider
+    participant Hook as matrix-client/react<br/>signIn state action
     participant Core as matrix-client<br/>client.ts
     participant SDK as matrix-js-sdk
     participant HS as Synapse
