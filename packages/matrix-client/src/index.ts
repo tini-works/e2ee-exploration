@@ -1,8 +1,4 @@
-export {
-  createMatrixClient,
-  loginWithPassword,
-  type LoginInput,
-} from "./client";
+export { createMatrixClient, loginWithPassword } from "./core/client";
 export {
   cacheSecurityKey,
   clearCachedSecurityKey,
@@ -12,20 +8,27 @@ export {
   hasSecretStorage,
   makeCryptoCallbacks,
   unlockWithSecurityKey,
-  type UnlockOutcome,
-} from "./secret-storage";
-export { getDeviceVerification, type DeviceVerification } from "./verification";
+} from "./core/secret-storage";
+export { getDeviceVerification } from "./core/verification";
 export {
   getPeerKeyShareState,
   requestKeyFromPeers,
   subscribePeerKeyShareState,
-  type PeerKeyShareState,
-  type RequestKeyArgs,
-} from "./peer-key-share";
-export { wipeLocalMatrixData } from "./wipe";
+} from "./core/peer-key-share";
+export { wipeLocalMatrixData } from "./core/wipe";
 export {
   DEFAULT_HOMESERVER_URL,
   DEFAULT_IDENTITY_SERVER_URL,
   DEFAULT_SESSION_STORAGE_KEY,
-  type StoredSession,
+} from "./constants";
+
+// Shared types — defined under ./types/*, surfaced here for consumers.
+export type {
+  DeviceVerification,
+  LoginInput,
+  PeerKeyShareState,
+  RequestKeyArgs,
+  RoomEventExport,
+  StoredSession,
+  UnlockOutcome,
 } from "./types";

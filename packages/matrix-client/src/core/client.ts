@@ -1,16 +1,10 @@
 "use client";
 
 import type { MatrixClient } from "matrix-js-sdk";
-import type { StoredSession } from "./types";
+import type { LoginInput } from "../types/auth";
+import type { StoredSession } from "../types/session";
 import { makeCryptoCallbacks } from "./secret-storage";
 import { startPeerKeyShare } from "./peer-key-share";
-
-export type LoginInput = {
-  baseUrl: string;
-  identityServerUrl?: string;
-  username: string;
-  password: string;
-};
 
 function deviceDisplayName(): string {
   if (typeof navigator === "undefined") return "Matrix App";

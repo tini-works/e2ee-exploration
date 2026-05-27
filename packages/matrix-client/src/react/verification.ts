@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDeviceVerification, type DeviceVerification } from "../verification";
+import { getDeviceVerification } from "../core/verification";
+import type { DeviceVerification } from "../types/crypto";
 import { useMatrix } from "./provider";
 
 /**

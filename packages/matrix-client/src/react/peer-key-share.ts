@@ -4,8 +4,8 @@ import { useSyncExternalStore } from "react";
 import {
   getPeerKeyShareState,
   subscribePeerKeyShareState,
-  type PeerKeyShareState,
-} from "../peer-key-share";
+} from "../core/peer-key-share";
+import type { PeerKeyShareState } from "../types/peer-key-share";
 
 const IDLE: PeerKeyShareState = { kind: "idle" };
 

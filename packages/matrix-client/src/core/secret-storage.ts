@@ -10,6 +10,7 @@ import type {
   UIAuthCallback,
 } from "matrix-js-sdk/lib/interactive-auth";
 import type { SecretStorageKeyDescriptionAesV1 } from "matrix-js-sdk/lib/secret-storage";
+import type { UnlockOutcome } from "../types/crypto";
 
 type MatrixError = Error & { httpStatus?: number; data?: { session?: string } };
 
@@ -143,12 +144,6 @@ export async function generateRecoveryKey(
 
   return { recoveryKey: generated.encodedPrivateKey };
 }
-
-export type UnlockOutcome = {
-  crossSigningReady: boolean;
-  secretStorageReady: boolean;
-  keyBackupRestored: { total: number; imported: number } | null;
-};
 
 const LOG = (...args: unknown[]) => console.log("[unlock]", ...args);
 const LOG_ERR = (...args: unknown[]) => console.error("[unlock]", ...args);

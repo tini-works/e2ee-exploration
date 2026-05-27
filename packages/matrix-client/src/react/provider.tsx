@@ -1,14 +1,12 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import type { MatrixClient } from "matrix-js-sdk";
 import {
   ExecutionContextProvider,
   ScopeProvider,
   useAtom,
 } from "@pumped-fn/lite-react";
-import type { LoginInput } from "../client";
-import { DEFAULT_SESSION_STORAGE_KEY, type StoredSession } from "../types";
+import { DEFAULT_SESSION_STORAGE_KEY } from "../constants";
 import { getMatrixScope } from "../state/scope";
 import {
   clientAtom,
@@ -21,9 +19,6 @@ import {
   sessionAtom,
   statusAtom,
   syncStateAtom,
-  type CryptoStatus,
-  type NotReadyReason,
-  type Status,
 } from "../state/atoms";
 import {
   bootstrapMatrix,
@@ -34,33 +29,18 @@ import {
   signIn,
   signOut,
 } from "../state/actions";
+import type {
+  MatrixContextValue,
+  MatrixProviderProps,
+} from "../types/react";
+import type { CryptoStatus, NotReadyReason, Status } from "../types/state";
 
-export type { CryptoStatus, NotReadyReason };
-
-export type MatrixContextValue = {
-  client: MatrixClient | null;
-  session: StoredSession | null;
-  status: Status;
-  error: string | null;
-  syncState: string | null;
-  lastSyncedAt: number | null;
-  cryptoStatus: CryptoStatus | null;
-  pendingBackup: number;
-  /** True once the user has entered a valid recovery key in this session. */
-  keyUnlockedThisSession: boolean;
-  /** Called when an unlock-style operation (unlock or resetBackup) succeeds. */
-  markKeyUnlocked: () => void;
-  ready: boolean;
-  notReadyReason: NotReadyReason | null;
-  signIn: (input: LoginInput) => Promise<void>;
-  signOut: () => Promise<void>;
-  resetBackup: (securityKey: string) => Promise<void>;
-};
-
-export type MatrixProviderProps = {
-  children: React.ReactNode;
-  /** localStorage key used to persist the session. Defaults to "matrix-client.session". */
-  sessionStorageKey?: string;
+export type {
+  CryptoStatus,
+  MatrixContextValue,
+  MatrixProviderProps,
+  NotReadyReason,
+  Status,
 };
 
 export function MatrixProvider({

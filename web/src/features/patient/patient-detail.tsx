@@ -5,16 +5,15 @@ import Link from "next/link";
 import type { MatrixEvent } from "matrix-js-sdk";
 import { useMatrix, usePeerKeyShareState } from "matrix-client/react";
 import { requestKeyFromPeers } from "matrix-client";
+import { listMessages, sendMessage } from "matrix-client/message";
+import { subscribeRooms } from "matrix-client/rooms";
 import {
   fullName,
   getPatient,
-  listMessages,
   listPatientHistory,
-  sendMessage,
-  subscribeRooms,
   type Patient,
   type PatientRecordRevision,
-} from "matrix-client/patients";
+} from "matrix-client/patient";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

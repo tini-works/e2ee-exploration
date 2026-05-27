@@ -1,13 +1,7 @@
 "use client";
 
 import type { MatrixClient } from "matrix-js-sdk";
-
-export type DeviceVerification = {
-  /** This device is signed by the account's self-signing key. */
-  deviceVerified: boolean;
-  /** The account's master key is trusted (cross-signing reachable). */
-  userVerified: boolean;
-};
+import type { DeviceVerification } from "../types/crypto";
 
 /**
  * Reads the cross-signing trust state for the current session. Returns nulls

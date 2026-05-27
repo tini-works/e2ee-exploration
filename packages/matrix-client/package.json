@@ -9,7 +9,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./react": "./src/react/index.ts",
-    "./patients": "./src/patients.ts"
+    "./patient": "./src/features/patient/index.ts",
+    "./message": "./src/features/message/index.ts",
+    "./clinic": "./src/features/clinic/index.ts",
+    "./rooms": "./src/core/rooms.ts",
+    "./types": "./src/types.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",

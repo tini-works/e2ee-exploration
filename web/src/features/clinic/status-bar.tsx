@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  useDeviceVerification,
-  useMatrix,
-  usePatientInvites,
-} from "matrix-client/react";
+import { useDeviceVerification, useMatrix } from "matrix-client/react";
+import { usePatientInvites } from "matrix-client/patient";
 import {
   generateRecoveryKey,
   hasSecretStorage,

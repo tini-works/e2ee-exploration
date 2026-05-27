@@ -1,5 +1,5 @@
-import { AppShell } from "@/components/app-shell";
-import { PatientDetail } from "@/components/patient-detail";
+import { AppShell } from "@/features/clinic/app-shell";
+import { PatientDetail } from "@/features/patient/patient-detail";
 
 export default async function PatientPage({
   params,

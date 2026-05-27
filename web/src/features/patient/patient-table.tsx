@@ -27,15 +27,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMatrix } from "matrix-client/react";
+import { exportRoomEvents, subscribeRooms } from "matrix-client/rooms";
 import {
   deletePatient,
-  exportRoomEvents,
   fullName,
   listPatientHistory,
   listPatients,
-  subscribeRooms,
   type Patient,
-} from "matrix-client/patients";
+} from "matrix-client/patient";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { NewPatientDialog } from "./patient-form";
 import { toast } from "sonner";

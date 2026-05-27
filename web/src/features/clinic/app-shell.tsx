@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useMatrix } from "matrix-client/react";
-import { SignIn } from "./sign-in";
+import { SignIn } from "@/features/auth/sign-in";
 import { StatusBar } from "./status-bar";
-import { FullPageLoader } from "./full-page-loader";
+import { FullPageLoader } from "@/components/ui/full-page-loader";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { status, session, error, pendingBackup } = useMatrix();

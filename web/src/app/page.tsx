@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/app-shell";
-import { PatientAccount } from "@/components/patient-account";
+import { AppShell } from "@/features/clinic/app-shell";
+import { AccountMenu } from "@/features/clinic/account-menu";
 
 export default function Home() {
   return (
     <AppShell>
-      <PatientAccount />
+      <AccountMenu />
     </AppShell>
   );
 }

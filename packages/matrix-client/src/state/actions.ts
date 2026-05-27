@@ -1,18 +1,16 @@
 "use client";
 
 import type { MatrixClient } from "matrix-js-sdk";
-import {
-  createMatrixClient,
-  loginWithPassword,
-  type LoginInput,
-} from "../client";
+import { createMatrixClient, loginWithPassword } from "../core/client";
 import {
   cacheSecurityKey,
   getStatus,
   hasCachedBackupDecryptionKey,
-} from "../secret-storage";
-import { DEFAULT_SESSION_STORAGE_KEY, type StoredSession } from "../types";
-import { wipeLocalMatrixData } from "../wipe";
+} from "../core/secret-storage";
+import { wipeLocalMatrixData } from "../core/wipe";
+import { DEFAULT_SESSION_STORAGE_KEY } from "../constants";
+import type { LoginInput } from "../types/auth";
+import type { StoredSession } from "../types/session";
 import { getMatrixScope } from "./scope";
 import {
   clientAtom,

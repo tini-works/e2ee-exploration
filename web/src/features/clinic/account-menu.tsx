@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { MatrixClient, Room } from "matrix-js-sdk";
-import { useMatrix, usePatientInvites } from "matrix-client/react";
-import { subscribeRooms } from "matrix-client/patients";
+import { useMatrix } from "matrix-client/react";
+import { usePatientInvites } from "matrix-client/patient";
+import { subscribeRooms } from "matrix-client/rooms";
 import { CLINICS, findClinicByUserId, isClinicUser } from "@/lib/config";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PatientTable } from "@/components/patient-table";
+import { PatientTable } from "@/features/patient/patient-table";
 import { toast } from "sonner";
 
 type Membership = "invite" | "join";
@@ -50,7 +51,7 @@ function listClinicRelations(client: MatrixClient): ClinicRelation[] {
   return rels.sort((a, b) => a.clinicName.localeCompare(b.clinicName));
 }
 
-export function PatientAccount() {
+export function AccountMenu() {
   const { client, session, ready, notReadyReason } = useMatrix();
   const { accept: acceptInvite, decline: declineInvite } = usePatientInvites();
   const [relations, setRelations] = useState<ClinicRelation[]>([]);

@@ -2,7 +2,14 @@
 
 import { atom, controller, type Lite } from "@pumped-fn/lite";
 import type { MatrixClient } from "matrix-js-sdk";
-import { DEFAULT_SESSION_STORAGE_KEY, type StoredSession } from "../types";
+import { DEFAULT_SESSION_STORAGE_KEY } from "../constants";
+import type { StoredSession } from "../types/session";
+import type {
+  CryptoStatus,
+  NotReadyReason,
+  Readiness,
+  Status,
+} from "../types/state";
 
 /**
  * The Matrix client state graph, on pumped-fn.
@@ -13,27 +20,6 @@ import { DEFAULT_SESSION_STORAGE_KEY, type StoredSession } from "../types";
  * SDK events into the writable atoms below via their controllers. Components
  * read them through useMatrix() (../react/provider).
  */
-
-export type Status = "initializing" | "idle" | "connecting" | "ready" | "error";
-
-export type CryptoStatus = {
-  crossSigningReady: boolean;
-  secretStorageReady: boolean;
-  backupVersion: string | null;
-};
-
-export type NotReadyReason =
-  | { kind: "not_signed_in" }
-  | { kind: "syncing"; syncState: string | null }
-  | { kind: "reconnecting" }
-  | { kind: "catchup" }
-  | { kind: "sync_error" }
-  | { kind: "needs_recovery_key" };
-
-export type Readiness = {
-  ready: boolean;
-  notReadyReason: NotReadyReason | null;
-};
 
 export function loadSession(
   storageKey: string = DEFAULT_SESSION_STORAGE_KEY,

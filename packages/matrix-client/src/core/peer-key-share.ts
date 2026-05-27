@@ -1,6 +1,7 @@
 "use client";
 
 import type { MatrixClient, MatrixEvent } from "matrix-js-sdk";
+import type { PeerKeyShareState, RequestKeyArgs } from "../types/peer-key-share";
 
 const LOG = (...args: unknown[]) => console.log("[peer-key-share]", ...args);
 const LOG_ERR = (...args: unknown[]) =>
@@ -11,15 +12,6 @@ const RESPONSE_EVENT_TYPE = "m.app.key_forward";
 
 const REQUEST_DEDUPE_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 30_000;
-
-export type PeerKeyShareState =
-  | { kind: "idle" }
-  | { kind: "requesting"; sentAt: number }
-  | { kind: "received"; receivedAt: number }
-  | { kind: "imported"; importedAt: number }
-  | { kind: "no-responders" }
-  | { kind: "timeout" }
-  | { kind: "error"; message: string };
 
 type Listener = (state: PeerKeyShareState) => void;
 
@@ -79,14 +71,6 @@ export function subscribePeerKeyShareState(
     if (set!.size === 0) store.listenersBySession.delete(sessionId);
   };
 }
-
-export type RequestKeyArgs = {
-  /** The user whose devices we ask. Usually the message's sender. */
-  fromUserId: string;
-  roomId: string;
-  sessionId: string;
-  senderKey: string;
-};
 
 export async function requestKeyFromPeers(
   client: MatrixClient,

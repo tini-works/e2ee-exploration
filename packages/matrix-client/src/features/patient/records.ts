@@ -1,53 +1,22 @@
 "use client";
 
-import {
-  ClientEvent,
-  EventType,
-  MatrixEventEvent,
-  MsgType,
-  RoomEvent,
-  type MatrixClient,
-  type MatrixEvent,
-  type Room,
-} from "matrix-js-sdk";
-import { CryptoEvent } from "matrix-js-sdk/lib/crypto-api";
+import type { MatrixClient, Room } from "matrix-js-sdk";
+import type {
+  Patient,
+  PatientRecord,
+  PatientRecordRevision,
+} from "../../types/patient";
+import { ensureSessionInBackup } from "../../core/backup";
+import { sendCustomEvent, sendCustomStateEvent } from "../../core/rooms";
+
 export const PATIENT_TAG = "com.matrix-app.patient";
 export const PATIENT_RECORD_EVENT_TYPE = "com.matrix-app.patient.record";
 export const PROFILE_THREAD_STATE_TYPE =
   "com.matrix-app.patient.profile-thread";
 
-export type PatientRecord = {
-  firstName: string;
-  lastName: string;
-  dob?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  updatedAt: string;
-  updatedTimes: number;
-};
-
 export function fullName(r: { firstName: string; lastName: string }): string {
   return `${r.firstName} ${r.lastName}`.trim();
 }
-
-export type PatientRecordRevision = PatientRecord & {
-  eventId: string;
-  sender: string;
-  ts: number;
-  isRoot: boolean;
-};
-
-export type Patient = {
-  roomId: string;
-  record: PatientRecord;
-};
-
-export type PendingInvite = {
-  roomId: string;
-  name: string;
-  inviterId: string | null;
-};
 
 type ThreadRelation = {
   rel_type: "m.thread";
@@ -57,69 +26,6 @@ type ThreadRelation = {
 type RecordContent = Partial<PatientRecord> & {
   "m.relates_to"?: ThreadRelation;
 };
-
-function sendCustomEvent(
-  client: MatrixClient,
-  roomId: string,
-  eventType: string,
-  content: Record<string, unknown>,
-): Promise<{ event_id: string }> {
-  return (
-    client.sendEvent as unknown as (
-      roomId: string,
-      eventType: string,
-      content: Record<string, unknown>,
-    ) => Promise<{ event_id: string }>
-  )(roomId, eventType, content);
-}
-
-async function waitForBackupDrain(
-  client: MatrixClient,
-  timeoutMs = 30_000,
-): Promise<void> {
-  return new Promise((resolve) => {
-    const handler = (remaining: number) => {
-      if (remaining === 0) {
-        client.off(CryptoEvent.KeyBackupSessionsRemaining, handler);
-        resolve();
-      }
-    };
-    client.on(CryptoEvent.KeyBackupSessionsRemaining, handler);
-    setTimeout(() => {
-      client.off(CryptoEvent.KeyBackupSessionsRemaining, handler);
-      resolve();
-    }, timeoutMs);
-  });
-}
-
-async function ensureSessionInBackup(client: MatrixClient): Promise<void> {
-  const crypto = client.getCrypto();
-  if (!crypto) return;
-  const activeVersion = await crypto.getActiveSessionBackupVersion();
-  if (!activeVersion) return; // backup not active — nothing we can do here
-  const backupManager = (crypto as unknown as {
-    backupManager?: { maybeUploadKey?: () => Promise<void> };
-  }).backupManager;
-  await backupManager?.maybeUploadKey?.();
-  await waitForBackupDrain(client);
-}
-
-function sendCustomStateEvent(
-  client: MatrixClient,
-  roomId: string,
-  eventType: string,
-  content: Record<string, unknown>,
-  stateKey = "",
-): Promise<{ event_id: string }> {
-  return (
-    client.sendStateEvent as unknown as (
-      roomId: string,
-      eventType: string,
-      content: Record<string, unknown>,
-      stateKey: string,
-    ) => Promise<{ event_id: string }>
-  )(roomId, eventType, content, stateKey);
-}
 
 export function getProfileThreadRoot(
   client: MatrixClient,
@@ -352,76 +258,12 @@ export function listPatientHistory(
   return out;
 }
 
-export type RoomEventExport = {
-  eventId: string | undefined;
-  type: string;
-  stateKey: string | undefined;
-  sender: string | undefined;
-  ts: number;
-  content: unknown;
-  unsigned: unknown;
-  isEncrypted: boolean;
-  decryptionFailureReason: string | null;
-  wireContent: unknown;
-};
-
-function dumpEvent(ev: import("matrix-js-sdk").MatrixEvent): RoomEventExport {
-  const failed = ev.isDecryptionFailure();
-  return {
-    eventId: ev.getId(),
-    type: ev.getType(),
-    stateKey: ev.getStateKey(),
-    sender: ev.getSender() ?? undefined,
-    ts: ev.getTs(),
-    content: failed ? null : ev.getContent(),
-    unsigned: ev.getUnsigned(),
-    isEncrypted: ev.isEncrypted(),
-    decryptionFailureReason: failed
-      ? (ev.decryptionFailureReason ?? "UNKNOWN_ERROR")
-      : null,
-    wireContent: ev.isEncrypted() ? ev.getWireContent() : null,
-  };
-}
-
-export function exportRoomEvents(
-  client: MatrixClient,
-  roomId: string,
-): { timeline: RoomEventExport[]; state: RoomEventExport[] } {
-  const room = client.getRoom(roomId);
-  if (!room) return { timeline: [], state: [] };
-  const timeline = room.getLiveTimeline().getEvents().map(dumpEvent);
-  const state: RoomEventExport[] = [];
-  for (const [, byKey] of room.currentState.events) {
-    for (const [, ev] of byKey) state.push(dumpEvent(ev));
-  }
-  return { timeline, state };
-}
-
 export async function deletePatient(
   client: MatrixClient,
   roomId: string,
 ): Promise<void> {
   await client.leave(roomId);
   await client.forget(roomId);
-}
-
-export function subscribeRooms(
-  client: MatrixClient,
-  cb: () => void,
-): () => void {
-  const handler = () => cb();
-  client.on(ClientEvent.Room, handler);
-  client.on(RoomEvent.Timeline, handler);
-  client.on(RoomEvent.Tags, handler);
-  client.on(RoomEvent.Name, handler);
-  client.on(MatrixEventEvent.Decrypted, handler);
-  return () => {
-    client.off(ClientEvent.Room, handler);
-    client.off(RoomEvent.Timeline, handler);
-    client.off(RoomEvent.Tags, handler);
-    client.off(RoomEvent.Name, handler);
-    client.off(MatrixEventEvent.Decrypted, handler);
-  };
 }
 
 export function getPatient(
@@ -440,70 +282,4 @@ export function getPatient(
       updatedTimes: 0,
     },
   };
-}
-
-export function listMessages(
-  client: MatrixClient,
-  roomId: string,
-): MatrixEvent[] {
-  const room = client.getRoom(roomId);
-  if (!room) return [];
-  return room
-    .getLiveTimeline()
-    .getEvents()
-    .filter((e) => e.getType() === EventType.RoomMessage);
-}
-
-export async function sendMessage(
-  client: MatrixClient,
-  roomId: string,
-  body: string,
-): Promise<void> {
-  await client.sendEvent(roomId, EventType.RoomMessage, {
-    msgtype: MsgType.Text,
-    body,
-  });
-  await ensureSessionInBackup(client);
-}
-
-export function listPendingInvites(client: MatrixClient): PendingInvite[] {
-  const userId = client.getUserId();
-  return client
-    .getRooms()
-    .filter((room) => room.getMyMembership() === "invite")
-    .map<PendingInvite>((room) => {
-      // The inviter is whoever set our membership=invite event in the
-      // invite-state preview the server returned.
-      let inviterId: string | null = null;
-      if (userId) {
-        const member = room.getMember(userId);
-        const ev = member?.events?.member;
-        inviterId = ev?.getSender() ?? null;
-      }
-      return {
-        roomId: room.roomId,
-        name: room.name ?? "(unnamed room)",
-        inviterId,
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export async function acceptPatientInvite(
-  client: MatrixClient,
-  roomId: string,
-): Promise<void> {
-  await client.joinRoom(roomId);
-  try {
-    await client.setRoomTag(roomId, PATIENT_TAG, { order: Date.now() });
-  } catch {
-    /* tag failure is non-fatal — the room is joined */
-  }
-}
-
-export async function declinePatientInvite(
-  client: MatrixClient,
-  roomId: string,
-): Promise<void> {
-  await client.leave(roomId);
 }

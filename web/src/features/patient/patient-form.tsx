@@ -18,7 +18,7 @@ import {
   createPatient,
   updatePatient,
   type PatientRecord,
-} from "matrix-client/patients";
+} from "matrix-client/patient";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { toast } from "sonner";
 
