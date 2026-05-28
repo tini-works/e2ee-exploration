@@ -6,7 +6,7 @@ import {
   type MatrixClient,
   type MatrixEvent,
 } from "matrix-js-sdk";
-import { ensureSessionInBackup } from "../../core/backup";
+import { ensureSessionInBackup } from "../core/backup";
 
 export function listMessages(
   client: MatrixClient,

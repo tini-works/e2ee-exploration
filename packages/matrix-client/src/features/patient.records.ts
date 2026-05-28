@@ -5,9 +5,9 @@ import type {
   Patient,
   PatientRecord,
   PatientRecordRevision,
-} from "../../types/patient";
-import { ensureSessionInBackup } from "../../core/backup";
-import { sendCustomEvent, sendCustomStateEvent } from "../../core/rooms";
+} from "../types/patient";
+import { ensureSessionInBackup } from "../core/backup";
+import { sendCustomEvent, sendCustomStateEvent } from "../core/rooms";
 
 export const PATIENT_TAG = "com.matrix-app.patient";
 export const PATIENT_RECORD_EVENT_TYPE = "com.matrix-app.patient.record";

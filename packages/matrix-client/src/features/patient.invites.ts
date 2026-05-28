@@ -1,8 +1,8 @@
 "use client";
 
 import type { MatrixClient } from "matrix-js-sdk";
-import type { PendingInvite } from "../../types/patient";
-import { PATIENT_TAG } from "./records";
+import type { PendingInvite } from "../types/patient";
+import { PATIENT_TAG } from "./patient.records";
 
 export function listPendingInvites(client: MatrixClient): PendingInvite[] {
   const userId = client.getUserId();

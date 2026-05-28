@@ -12,16 +12,16 @@ export {
   listPatientHistory,
   deletePatient,
   getPatient,
-} from "./records";
+} from "./patient.records";
 export {
   listPendingInvites,
   acceptPatientInvite,
   declinePatientInvite,
-} from "./invites";
-export { usePatientInvites } from "./hooks";
+} from "./patient.invites";
+export { usePatientInvites } from "./patient.hooks";
 export type {
   Patient,
   PatientRecord,
   PatientRecordRevision,
   PendingInvite,
-} from "../../types/patient";
+} from "../types/patient";

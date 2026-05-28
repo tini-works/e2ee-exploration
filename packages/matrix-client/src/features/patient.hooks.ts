@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { PendingInvite } from "../../types/patient";
-import { useMatrix } from "../../react/provider";
+import type { PendingInvite } from "../types/patient";
+import { useMatrix } from "../react/provider";
 import {
   acceptPatientInvite,
   declinePatientInvite,
   listPendingInvites,
-} from "./invites";
+} from "./patient.invites";
 
 export function usePatientInvites() {
   const { client } = useMatrix();

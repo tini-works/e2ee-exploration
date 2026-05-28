@@ -9,9 +9,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./react": "./src/react/index.ts",
-    "./patient": "./src/features/patient/index.ts",
-    "./message": "./src/features/message/index.ts",
-    "./clinic": "./src/features/clinic/index.ts",
+    "./patient": "./src/features/patient.ts",
+    "./message": "./src/features/message.ts",
     "./rooms": "./src/core/rooms.ts",
     "./types": "./src/types.ts"
   },
