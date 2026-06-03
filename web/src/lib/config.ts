@@ -5,6 +5,10 @@ export type Clinic = {
 
 export const CLINICS: Clinic[] = [
   {
+    name: "Charité – Universitätsmedizin Berlin",
+    userId: "@silenteer.matrix:matrix.org",
+  },
+  {
     name: "Universitätsklinikum Hamburg-Eppendorf",
     userId: "@quochuydev.matrix:matrix.org",
   },

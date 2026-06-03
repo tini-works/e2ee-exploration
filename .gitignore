@@ -34,6 +34,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but DO track example/template files (no secrets)
+!.env.example
+!.env.local.example
+!*.env.example
 
 # synapse runtime secrets + local config — never commit (any location)
 **/homeserver.yaml

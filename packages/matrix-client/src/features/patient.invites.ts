@@ -1,15 +1,15 @@
 "use client";
 
 import type { MatrixClient } from "matrix-js-sdk";
-import type { PendingInvite } from "../types/patient";
+import type { MatrixPendingInvite } from "../types/patient";
 import { PATIENT_TAG } from "./patient.records";
 
-export function listPendingInvites(client: MatrixClient): PendingInvite[] {
+export function listPendingInvites(client: MatrixClient): MatrixPendingInvite[] {
   const userId = client.getUserId();
   return client
     .getRooms()
     .filter((room) => room.getMyMembership() === "invite")
-    .map<PendingInvite>((room) => {
+    .map<MatrixPendingInvite>((room) => {
       // The inviter is whoever set our membership=invite event in the
       // invite-state preview the server returned.
       let inviterId: string | null = null;

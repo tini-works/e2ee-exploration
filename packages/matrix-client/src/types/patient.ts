@@ -1,4 +1,4 @@
-export type PatientRecord = {
+export type MatrixPatientRecord = {
   firstName: string;
   lastName: string;
   dob?: string;
@@ -9,19 +9,19 @@ export type PatientRecord = {
   updatedTimes: number;
 };
 
-export type PatientRecordRevision = PatientRecord & {
+export type MatrixPatientRecordRevision = MatrixPatientRecord & {
   eventId: string;
   sender: string;
   ts: number;
   isRoot: boolean;
 };
 
-export type Patient = {
+export type MatrixPatient = {
   roomId: string;
-  record: PatientRecord;
+  record: MatrixPatientRecord;
 };
 
-export type PendingInvite = {
+export type MatrixPendingInvite = {
   roomId: string;
   name: string;
   inviterId: string | null;

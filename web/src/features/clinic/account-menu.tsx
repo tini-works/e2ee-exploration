@@ -1,68 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import type { MatrixClient, Room } from "matrix-js-sdk";
-import { useMatrix } from "matrix-client/react";
-import { usePatientInvites } from "matrix-client/patient";
-import { subscribeRooms } from "matrix-client/rooms";
-import { CLINICS, findClinicByUserId, isClinicUser } from "@/lib/config";
-import { notReadyMessage } from "@/lib/not-ready-message";
+import { useMemo } from "react";
+import { matrixReact } from "matrix-client/react";
+import { findClinicByUserId, isClinicUser } from "@/lib/config";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PatientTable } from "@/features/patient/patient-table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CopyIcon } from "lucide-react";
 import { toast } from "sonner";
 
-type Membership = "invite" | "join";
-
-type ClinicRelation = {
-  clinicName: string;
-  clinicUserId: string;
-  roomId: string;
-  roomName: string;
-  membership: Membership;
-};
-
-function findClinicMember(room: Room): string | null {
-  for (const clinic of CLINICS) {
-    const member = room.getMember(clinic.userId);
-    if (member) return clinic.userId;
-  }
-  return null;
-}
-
-function listClinicRelations(client: MatrixClient): ClinicRelation[] {
-  const rels: ClinicRelation[] = [];
-  for (const room of client.getRooms()) {
-    const membership = room.getMyMembership();
-    if (membership !== "invite" && membership !== "join") continue;
-    const clinicUserId = findClinicMember(room);
-    if (!clinicUserId) continue;
-    const clinic = findClinicByUserId(clinicUserId);
-    if (!clinic) continue;
-    rels.push({
-      clinicName: clinic.name,
-      clinicUserId,
-      roomId: room.roomId,
-      roomName: room.name ?? "(unnamed room)",
-      membership: membership as Membership,
-    });
-  }
-  return rels.sort((a, b) => a.clinicName.localeCompare(b.clinicName));
+function CopyField({ label, value }: { label: string; value: string }) {
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+  return (
+    <div className="space-y-1">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <button
+        type="button"
+        onClick={onCopy}
+        title={`Copy ${label}`}
+        className="group flex w-full items-center justify-between gap-2 rounded-md border bg-muted/40 px-2.5 py-1.5 text-left font-mono text-xs hover:bg-muted"
+      >
+        <span className="truncate">{value}</span>
+        <CopyIcon className="size-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
+      </button>
+    </div>
+  );
 }
 
 export function AccountMenu() {
-  const { client, session, ready, notReadyReason } = useMatrix();
-  const { accept: acceptInvite, decline: declineInvite } = usePatientInvites();
-  const [relations, setRelations] = useState<ClinicRelation[]>([]);
-  const [busyRoom, setBusyRoom] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!client) return;
-    const refresh = () => setRelations(listClinicRelations(client));
-    refresh();
-    return subscribeRooms(client, refresh);
-  }, [client]);
+  const { session } = matrixReact.useMatrix();
 
   const userIsClinic = isClinicUser(session?.userId);
   const ownClinic = useMemo(
@@ -70,147 +48,47 @@ export function AccountMenu() {
     [session?.userId],
   );
 
-  const handleAccept = async (roomId: string, clinicName: string) => {
-    setBusyRoom(roomId);
-    try {
-      await acceptInvite(roomId);
-      toast.success(`Joined ${clinicName}.`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyRoom(null);
-    }
-  };
-
-  const handleDecline = async (roomId: string) => {
-    setBusyRoom(roomId);
-    try {
-      await declineInvite(roomId);
-      toast.success("Declined.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyRoom(null);
-    }
-  };
-
   return (
-    <div className="space-y-8">
-      <section className="space-y-2">
-        <h1 className="text-2xl font-semibold">Your account</h1>
+    <div className="mx-auto max-w-xl space-y-6">
+      <section className="space-y-1">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
+          Your account
+        </h1>
         <p className="text-sm text-muted-foreground">
-          This is the patient-side view of your Matrix account. Clinics that
-          have started a record for you appear below.
+          Your Matrix identity and role on this device.
         </p>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-10">
-        <section className="rounded-md border p-4 space-y-3 lg:col-span-6">
-          <div className="text-sm font-medium">Profile</div>
-          <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
-            <dt className="text-muted-foreground">User ID</dt>
-            <dd className="font-mono break-all">{session?.userId ?? "—"}</dd>
-            <dt className="text-muted-foreground">Device</dt>
-            <dd className="font-mono break-all">{session?.deviceId ?? "—"}</dd>
-            <dt className="text-muted-foreground">Homeserver</dt>
-            <dd className="font-mono break-all">{session?.baseUrl ?? "—"}</dd>
-            <dt className="text-muted-foreground">Role</dt>
-            <dd>
-              {userIsClinic ? (
-                <span className="inline-flex items-center gap-2">
-                  <Badge>Clinic</Badge>
-                  <span className="text-muted-foreground">
-                    {ownClinic?.name}
-                  </span>
-                </span>
-              ) : (
-                <Badge variant="secondary">Patient</Badge>
-              )}
-            </dd>
-          </dl>
-        </section>
-
-        <section className="space-y-3 lg:col-span-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">Clinics</h2>
-            <span className="text-xs text-muted-foreground">
-              {relations.length} record{relations.length === 1 ? "" : "s"}
-            </span>
-          </div>
-          {relations.length === 0 ? (
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No clinics have invited you yet. When a clinic creates a record
-              for you, it will appear here.
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {relations.map((rel) => {
-                const busy = busyRoom === rel.roomId;
-                const isInvite = rel.membership === "invite";
-                const body = (
-                  <div className="min-w-0 space-y-1">
-                    <div className="font-medium truncate">{rel.clinicName}</div>
-                    <div className="text-xs text-muted-foreground font-mono truncate">
-                      {rel.clinicUserId}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      Room: {rel.roomName}
-                    </div>
-                  </div>
-                );
-                return (
-                  <li
-                    key={rel.roomId}
-                    className="flex items-center justify-between gap-3 rounded-md border px-4 py-3"
-                  >
-                    {isInvite ? (
-                      body
-                    ) : (
-                      <Link
-                        href={`/patients/${encodeURIComponent(rel.roomId)}`}
-                        className="min-w-0 flex-1 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                      >
-                        {body}
-                      </Link>
-                    )}
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Badge variant={isInvite ? "destructive" : "default"}>
-                        {isInvite ? "Invited" : "Joined"}
-                      </Badge>
-                      {isInvite ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy || !!busyRoom}
-                            onClick={() => handleDecline(rel.roomId)}
-                          >
-                            {busy ? "…" : "Decline"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={busy || !!busyRoom || !ready}
-                            title={
-                              !ready ? notReadyMessage(notReadyReason) : undefined
-                            }
-                            onClick={() =>
-                              handleAccept(rel.roomId, rel.clinicName)
-                            }
-                          >
-                            {busy ? "…" : "Accept"}
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Profile</CardTitle>
+          <CardDescription>Your Matrix identity and role.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {session?.userId && (
+            <CopyField label="User ID" value={session.userId} />
           )}
-        </section>
-      </div>
-
-      {userIsClinic && <PatientTable />}
+          {session?.deviceId && (
+            <CopyField label="Device" value={session.deviceId} />
+          )}
+          {session?.baseUrl && (
+            <CopyField label="Homeserver" value={session.baseUrl} />
+          )}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-xs text-muted-foreground">Role</span>
+            {userIsClinic ? (
+              <span className="inline-flex items-center gap-2">
+                <Badge>Clinic</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {ownClinic?.name}
+                </span>
+              </span>
+            ) : (
+              <Badge variant="secondary">Patient</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { PendingInvite } from "../types/patient";
+import type { MatrixPendingInvite } from "../types/patient";
 import { useMatrix } from "../react/provider";
 import {
   acceptPatientInvite,
@@ -11,7 +11,7 @@ import {
 
 export function usePatientInvites() {
   const { client } = useMatrix();
-  const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [invites, setInvites] = useState<MatrixPendingInvite[]>([]);
 
   useEffect(() => {
     if (!client) {

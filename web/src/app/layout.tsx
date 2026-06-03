@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { MatrixProvider } from "matrix-client/react";
+import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
@@ -14,10 +16,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
-        <MatrixProvider>{children}</MatrixProvider>
-        <Toaster />
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full" suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <MatrixProvider>{children}</MatrixProvider>
+          </TooltipProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,12 +1,13 @@
 ---
 id: c3-113
-c3-seal: d9684cdbb2be1c4633a286828683ae24474a8b7ac88ecda4a34c779db7bb3dee
+c3-seal: 6fd6ce1cc0eb2292e4af30586be2bc874692d6b9919ef1b33e7f08314648aafe
 title: patient-detail
 type: component
 category: feature
 parent: c3-1
 goal: Render a single patient's profile, profile-revision history, and encrypted timeline in one page. Drives message sending and renders detailed diagnostics for unable-to-decrypt events so the user can see why decryption failed and what peer-key-share is doing about it.
 uses:
+    - ref-encrypted-attachments
     - ref-key-gate
     - ref-recovery-key
     - ref-room-per-patient
@@ -63,6 +64,7 @@ Non-goals: the actual mutations on the record (delegated to patient-form's `upda
 | rule-key-gate-disable | rule | Disabled mutations | hard | Send button disable expression covers sending, empty input, and !ready. |
 | rule-no-direct-sdk-import | rule | Type-only SDK use | hard | MatrixEvent is imported as a type only; runtime calls go through the package. |
 | rule-toast-error-shape | rule | Send-error toast | hard | Currently uses single-arg toast.error; the rule's headline + description shape is the target. |
+| ref-encrypted-attachments | ref | Compliance target added by c3x wire; refine what must be reviewed or complied with before handoff. | wired compliance target beats uncited local prose | Added by c3x wire for explicit compliance review. |
 
 ## Contract
 

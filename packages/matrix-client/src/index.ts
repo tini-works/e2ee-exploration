@@ -1,20 +1,14 @@
+/**
+ * Root entry — strictly cross-cutting matrix-client surface. Feature-specific
+ * code lives under namespaced subpaths so it doesn't collide with host code:
+ *
+ *   import { matrixPatient } from "matrix-client/patient";
+ *   import { matrixMessage } from "matrix-client/message";
+ *   import { matrixRooms }   from "matrix-client/rooms";
+ *   import { matrixCrypto }  from "matrix-client/crypto";
+ *   import { matrixReact }   from "matrix-client/react";
+ */
 export { createMatrixClient, loginWithPassword } from "./core/client";
-export {
-  cacheSecurityKey,
-  clearCachedSecurityKey,
-  generateRecoveryKey,
-  getStatus,
-  hasCachedBackupDecryptionKey,
-  hasSecretStorage,
-  makeCryptoCallbacks,
-  unlockWithSecurityKey,
-} from "./core/secret-storage";
-export { getDeviceVerification } from "./core/verification";
-export {
-  getPeerKeyShareState,
-  requestKeyFromPeers,
-  subscribePeerKeyShareState,
-} from "./core/peer-key-share";
 export { wipeLocalMatrixData } from "./core/wipe";
 export {
   DEFAULT_HOMESERVER_URL,
@@ -22,10 +16,14 @@ export {
   DEFAULT_SESSION_STORAGE_KEY,
 } from "./constants";
 
-// Shared types — defined under ./types/*, surfaced here for consumers.
+// Shared types — defined under ./types/*, surfaced here as a one-stop import.
 export type {
   DeviceVerification,
   LoginInput,
+  MatrixPatient,
+  MatrixPatientRecord,
+  MatrixPatientRecordRevision,
+  MatrixPendingInvite,
   PeerKeyShareState,
   RequestKeyArgs,
   RoomEventExport,

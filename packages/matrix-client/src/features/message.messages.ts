@@ -31,3 +31,21 @@ export async function sendMessage(
   });
   await ensureSessionInBackup(client);
 }
+
+/**
+ * Delete a message via Matrix redaction. The homeserver strips the event's
+ * content room-wide (it becomes a tombstone all members see as "deleted"),
+ * including the `EncryptedFile` of attachment messages. Requires redact
+ * permission for the target event (always granted for your own events).
+ *
+ * NOTE: redaction removes the *reference* to an attachment, not the ciphertext
+ * in S3 — the caller deletes the stored object separately (it must capture the
+ * object key before redacting, since redaction wipes it).
+ */
+export async function deleteMessage(
+  client: MatrixClient,
+  roomId: string,
+  eventId: string,
+): Promise<void> {
+  await client.redactEvent(roomId, eventId);
+}

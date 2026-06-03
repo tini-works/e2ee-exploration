@@ -2,9 +2,9 @@
 
 import type { MatrixClient, Room } from "matrix-js-sdk";
 import type {
-  Patient,
-  PatientRecord,
-  PatientRecordRevision,
+  MatrixPatient,
+  MatrixPatientRecord,
+  MatrixPatientRecordRevision,
 } from "../types/patient";
 import { ensureSessionInBackup } from "../core/backup";
 import { sendCustomEvent, sendCustomStateEvent } from "../core/rooms";
@@ -23,7 +23,7 @@ type ThreadRelation = {
   event_id: string;
 };
 
-type RecordContent = Partial<PatientRecord> & {
+type RecordContent = Partial<MatrixPatientRecord> & {
   "m.relates_to"?: ThreadRelation;
 };
 
@@ -47,12 +47,12 @@ function isPatientRoom(room: Room): boolean {
   return Object.prototype.hasOwnProperty.call(tags, PATIENT_TAG);
 }
 
-function latestRecordFromRoom(room: Room): PatientRecord | null {
+function latestRecordFromRoom(room: Room): MatrixPatientRecord | null {
   const events = room.getLiveTimeline().getEvents();
   for (let i = events.length - 1; i >= 0; i--) {
     const ev = events[i];
     if (ev.getType() === PATIENT_RECORD_EVENT_TYPE) {
-      const content = ev.getContent() as Partial<PatientRecord>;
+      const content = ev.getContent() as Partial<MatrixPatientRecord>;
       if (
         content &&
         typeof content.firstName === "string" &&
@@ -76,11 +76,11 @@ function latestRecordFromRoom(room: Room): PatientRecord | null {
   return null;
 }
 
-export function listPatients(client: MatrixClient): Patient[] {
+export function listPatients(client: MatrixClient): MatrixPatient[] {
   return client
     .getRooms()
     .filter(isPatientRoom)
-    .map<Patient>((room) => {
+    .map<MatrixPatient>((room) => {
       const record = latestRecordFromRoom(room);
       return {
         roomId: room.roomId,
@@ -97,7 +97,7 @@ export function listPatients(client: MatrixClient): Patient[] {
 
 export async function createPatient(
   client: MatrixClient,
-  input: Omit<PatientRecord, "updatedAt" | "updatedTimes">,
+  input: Omit<MatrixPatientRecord, "updatedAt" | "updatedTimes">,
   options: { inviteUserIds?: string[] } = {},
 ): Promise<string> {
   const inviteUserIds = (options.inviteUserIds ?? []).filter(Boolean);
@@ -132,7 +132,7 @@ export async function createPatient(
     }
   }
 
-  const record: PatientRecord = {
+  const record: MatrixPatientRecord = {
     ...input,
     updatedAt: new Date().toISOString(),
     updatedTimes: 0,
@@ -156,7 +156,7 @@ export async function createPatient(
 export async function updatePatient(
   client: MatrixClient,
   roomId: string,
-  input: Omit<PatientRecord, "updatedAt" | "updatedTimes">,
+  input: Omit<MatrixPatientRecord, "updatedAt" | "updatedTimes">,
 ): Promise<void> {
   let rootEventId = getProfileThreadRoot(client, roomId);
 
@@ -171,7 +171,7 @@ export async function updatePatient(
   }
 
   const previous = latestRecordFromRoom(client.getRoom(roomId)!);
-  const record: PatientRecord = {
+  const record: MatrixPatientRecord = {
     ...input,
     updatedAt: new Date().toISOString(),
     updatedTimes: (previous?.updatedTimes ?? 0) + 1,
@@ -219,12 +219,12 @@ function findOldestRecordEventId(
 export function listPatientHistory(
   client: MatrixClient,
   roomId: string,
-): PatientRecordRevision[] {
+): MatrixPatientRecordRevision[] {
   const room = client.getRoom(roomId);
   if (!room) return [];
   const rootEventId = getProfileThreadRoot(client, roomId);
   const events = room.getLiveTimeline().getEvents();
-  const out: PatientRecordRevision[] = [];
+  const out: MatrixPatientRecordRevision[] = [];
   for (let i = events.length - 1; i >= 0; i--) {
     const ev = events[i];
     if (ev.getType() !== PATIENT_RECORD_EVENT_TYPE) continue;
@@ -269,7 +269,7 @@ export async function deletePatient(
 export function getPatient(
   client: MatrixClient,
   roomId: string,
-): Patient | null {
+): MatrixPatient | null {
   const room = client.getRoom(roomId);
   if (!room) return null;
   const record = latestRecordFromRoom(room);

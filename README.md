@@ -1,173 +1,92 @@
-# Matrix Patient Records
+## Overview
 
-## Package interactions
+How `web`, `matrix-client`, and `matrix-js-sdk` collaborate across the three core flows.
 
-### Sign in and session bootstrap
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant UI as web/sign-in.tsx
-    participant Hook as matrix-client/react<br/>signIn state action
-    participant Core as matrix-client<br/>client.ts
-    participant SDK as matrix-js-sdk
-    participant HS as Synapse
-
-    UI->>Hook: signIn({baseUrl, user, pass})
-    Hook->>Core: loginWithPassword(input)
-    Core->>SDK: createClient + loginRequest
-    SDK->>HS: POST /login
-    HS-->>SDK: access_token, device_id
-    SDK-->>Core: login response
-    Core-->>Hook: StoredSession
-    Hook->>Hook: localStorage[sessionStorageKey] = session
-    Hook->>Core: createMatrixClient(session)
-    Core->>SDK: startClient + initRustCrypto
-    SDK->>HS: GET /sync
-    HS-->>SDK: sync state (PREPARED)
-    SDK-->>Core: MatrixClient
-    Core-->>Hook: client
-    Hook-->>UI: ready=false<br/>notReadyReason={kind:"needs_recovery_key"}
-```
-
-### Unlock recovery key (the access gate)
+### 1. Authentication & Recovery Key
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant UI as web/status-bar.tsx
-    participant Core as matrix-client<br/>secret-storage.ts
-    participant Hook as matrix-client/react<br/>MatrixProvider
-    participant SDK as matrix-js-sdk crypto-api
-    participant HS as Synapse
+  autonumber
+  actor U as User
+  participant W as web
+  participant MC as matrix-client
+  participant SDK as matrix-js-sdk
 
-    UI->>Core: unlockWithSecurityKey(client, key)
-    Core->>SDK: decodeRecoveryKey + checkKey
-    SDK-->>Core: valid
-    Core->>SDK: bootstrapCrossSigning
-    Core->>SDK: crossSignDevice(deviceId)
-    Note over Core,SDK: bootstrap is a no-op when CS already exists — sign this device explicitly so it appears verified to itself and to peers
-    Core->>SDK: checkKeyBackupAndEnable
-    SDK->>HS: GET /room_keys/version
-    HS-->>SDK: backup version
-    Core->>SDK: loadSessionBackupPrivateKeyFromSecretStorage
-    Core->>SDK: restoreKeyBackup
-    SDK->>HS: GET /room_keys/keys
-    HS-->>SDK: encrypted session keys
-    SDK-->>Core: {imported, total}
-    Core-->>UI: UnlockOutcome
-    UI->>Hook: markKeyUnlocked()
-    Hook-->>UI: ready=true, notReadyReason=null
+  rect rgb(240, 255, 240)
+  U->>W: Sign in (username / password)
+  W->>MC: matrixReact.signIn()
+  MC->>SDK: createClient() + loginRequest()
+  MC->>SDK: initRustCrypto() + startClient()
+  MC-->>W: status = ready
+
+  U->>W: Open "Recovery key"
+  W->>MC: matrixCrypto.hasSecretStorage()
+  alt SSSS exists
+    U->>W: Enter recovery key
+    W->>MC: matrixCrypto.unlockWithSecurityKey()
+    MC->>SDK: bootstrapCrossSigning()
+    MC->>SDK: loadSessionBackupPrivateKeyFromSecretStorage()
+    MC->>SDK: restoreKeyBackup()
+  else SSSS missing
+    U->>W: Enter password
+    W->>MC: matrixCrypto.generateRecoveryKey()
+    MC->>SDK: createRecoveryKeyFromPassphrase()
+    MC->>SDK: bootstrapCrossSigning() + bootstrapSecretStorage()
+    MC-->>W: { recoveryKey }
+  end
+  W->>MC: matrixReact.markKeyUnlocked()
+  end
 ```
 
-### Create patient (mutation with E2EE)
+### 2. Patient Management
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant UI as web/patient-form.tsx
-    participant Hook as useMatrix()
-    participant Patients as matrix-client/patients<br/>createPatient
-    participant SDK as matrix-js-sdk MatrixClient
-    participant HS as Synapse
+  autonumber
+  actor U as User
+  participant W as web
+  participant MC as matrix-client
+  participant SDK as matrix-js-sdk
 
-    UI->>Hook: client (from context)
-    UI->>Patients: createPatient(client, record, {inviteUserIds})
-    Patients->>SDK: createRoom (encryption: megolm)
-    SDK->>HS: POST /createRoom
-    HS-->>SDK: room_id
-    Patients->>SDK: setRoomTag(roomId, PATIENT_TAG)
-    Patients->>SDK: getUserDeviceInfo(self + invitees)
-    Note over Patients,SDK: Prime megolm session for every device that must decrypt the first event
-    Patients->>SDK: sendEvent(PATIENT_RECORD)
-    SDK->>SDK: megolm encrypt
-    SDK->>HS: PUT /send/{type}/{txn}
-    Patients->>SDK: sendStateEvent(PROFILE_THREAD root)
-    Patients->>SDK: wait for KeyBackupSessionsRemaining=0
-    SDK->>HS: PUT /room_keys/keys (backup)
-    Patients-->>UI: roomId
+  rect rgb(248, 240, 255)
+  U->>W: New patient
+  W->>MC: matrixPatient.create(values, {inviteUserIds})
+  MC->>SDK: createRoom()
+  MC->>SDK: getUserDeviceInfo()
+  MC->>SDK: sendStateEvent() + sendEvent()
+
+  U->>W: Open patient detail
+  W->>MC: matrixPatient.get(roomId)
+  W->>MC: matrixMessage.list(roomId)
+  MC->>SDK: getRoom() + getLiveTimeline().getEvents()
+
+  U->>W: Send message
+  W->>MC: matrixMessage.send(roomId, body)
+  MC->>SDK: sendEvent(roomId, "m.room.message", …)
+  end
 ```
 
-## TI-Messenger reference architecture
-
-Same diagram with the German labels translated, for readers unfamiliar
-with the gematik terminology.
+### 3. Handling Undecryptable Messages
 
 ```mermaid
-flowchart LR
-    subgraph CLIENT[" "]
-        direction TB
-        TMC[TI-Messenger Client]
-        OAC[Org Admin Client]
-        FRD[Registration Service<br/>Frontend]
-    end
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant W as web
+  participant MC as matrix-client
+  participant SDK as matrix-js-sdk
 
-    subgraph VZD[Directory Service<br/>FHIR Directory]
-        direction LR
-        FP[FHIR Proxy]
-        FD[(FHIR Directory)]
-        AS[Auth Service]
-        OAUTH[OAuth]
-    end
-
-    subgraph FACH[TI-Messenger Service]
-        direction TB
-        RD[Registration Service]
-        PG[Push Gateway]
-        subgraph MS[Messenger Service]
-            direction LR
-            MP[Messenger Proxy]
-            MH[Matrix Homeserver]
-        end
-    end
-
-    IDP[Central<br/>IDP Service]
-    subgraph FACH2[TI-Messenger Service]
-        F2[ peer provider ]
-    end
-    AUTH[Authentication Service]
-
-    TMC -- "Matrix – Client Server API" --> MP
-    TMC -- "I_TiMessengerContactManagement" --> MP
-    TMC -- "I_Registration" --> RD
-    FRD -- "I_Registration" --> RD
-    OAC -- "I_requestToken" --> RD
-
-    MP <-- "HTTP(S) forward" --> MH
-    RD -- "I_internVerification" --> MS
-
-    RD -- "FHIRDirectoryTIMProviderAPI" --> FP
-    FP --- FD
-    FP --- AS
-    AS --- OAUTH
-    TMC -- "FHIRDirectorySearchAPI" --> FP
-    OAC -- "FHIRDirectoryOwnerAPI" --> FP
-
-    AS -- "OIDC" --> IDP
-    RD -- "OIDC" --> IDP
-
-    MH <-- "Matrix – Server Server API" --> FACH2
-
-    TMC -- "Authentication" --> AUTH
-    FACH -- "Authentication" --> AUTH
-
-    classDef green    fill:#d4e8c8,stroke:#6b9c4e,color:#000
-    classDef orange   fill:#fde2cc,stroke:#d97f3e,color:#000
-    classDef blue     fill:#cfe2ef,stroke:#4a90b8,color:#000
-    classDef darkblue fill:#a8c8dc,stroke:#3a7a9c,color:#000
-    classDef gray     fill:#ececec,stroke:#888,color:#000
-
-    class TMC,OAC,FRD green
-    class FP,FD,AS,OAUTH orange
-    class RD,PG blue
-    class MP,MH darkblue
-    class IDP,AUTH,F2 gray
-
-    style CLIENT fill:#d4e8c8,stroke:#6b9c4e
-    style VZD    fill:#fde2cc,stroke:#d97f3e
-    style FACH   fill:#cfe2ef,stroke:#4a90b8
-    style MS     fill:#a8c8dc,stroke:#3a7a9c
-    style FACH2  fill:#cfe2ef,stroke:#4a90b8
+  U->>W: Open room timeline
+  rect rgb(255, 235, 235)
+  SDK-->>W: Undecryptable event in timeline
+  W->>MC: matrixCrypto.requestKeyFromPeers({fromUserId, roomId, sessionId, senderKey})
+  MC->>SDK: getUserDeviceInfo()
+  MC->>SDK: encryptAndSendToDevice() — request room key
+  Note over MC,SDK: Peer responds with key material
+  W->>MC: matrixCrypto.usePeerKeyShareState(sessionId)
+  MC->>SDK: importRoomKeysAsJson()
+  MC->>SDK: room.decryptAllEvents()
+  SDK-->>W: Decrypted messages rendered
+  end
+  W-->>U: Messages displayed
 ```
-
-Source: [gematik/api-ti-messenger](https://github.com/gematik/api-ti-messenger).

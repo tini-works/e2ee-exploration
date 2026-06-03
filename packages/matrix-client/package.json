@@ -11,8 +11,9 @@
     "./react": "./src/react/index.ts",
     "./patient": "./src/features/patient.ts",
     "./message": "./src/features/message.ts",
-    "./rooms": "./src/core/rooms.ts",
-    "./types": "./src/types.ts"
+    "./attachment": "./src/features/attachment.ts",
+    "./rooms": "./src/features/rooms.ts",
+    "./crypto": "./src/features/crypto.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",

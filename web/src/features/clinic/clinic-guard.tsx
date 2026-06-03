@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMatrix } from "matrix-client/react";
+import { matrixReact } from "matrix-client/react";
 import { isClinicUser } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 
 export function ClinicGuard({ children }: { children: React.ReactNode }) {
-  const { session } = useMatrix();
+  const { session } = matrixReact.useMatrix();
 
   if (!isClinicUser(session?.userId)) {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold">Clinic access only</h1>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
+          Clinic access only
+        </h1>
         <p className="text-sm text-muted-foreground">
           Your account{" "}
           <span className="font-mono">{session?.userId ?? "(unknown)"}</span>{" "}

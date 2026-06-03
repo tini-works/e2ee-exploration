@@ -1,72 +1,179 @@
-## Why does this exist?
-
-## Bootstrap: how much code disappears
+## Architecture
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'background':'#ffffff','primaryTextColor':'#000000','actorBkg':'#ffffff','actorBorder':'#f59e0b','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#ec4899','signalTextColor':'#000000','sequenceNumberColor':'#ffffff','noteBkgColor':'#ffffff','noteBorderColor':'#a855f7','noteTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','fontFamily':'system-ui'}}}%%
 sequenceDiagram
   autonumber
-  participant App
-  participant MC as matrix-client
+  participant App as Caller
+  participant R as matrixReact
+  participant A as state/actions
+  participant T as state/atoms
+  participant C as core
   participant SDK as matrix-js-sdk
-  participant IDB as IndexedDB
-  participant HS as Homeserver
 
-  App->>MC: createMatrixClient(session)
-  MC->>IDB: new IndexedDBStore + startup
-  MC->>IDB: new IndexedDBCryptoStore
-  MC->>SDK: createClient store + cryptoStore
-  MC->>SDK: initRustCrypto
-  MC->>SDK: startClient initialSyncLimit 20
-  MC->>HS: GET /sync
-  HS-->>MC: PREPARED
-  MC->>MC: startPeerKeyShare<br/>attach to-device listener
-  MC->>SDK: crypto.checkKeyBackupAndEnable
-  MC->>SDK: crypto.restoreKeyBackup
-  Note over MC: silent if no cached backup key yet
-  MC-->>App: ready MatrixClient
-```
+  rect rgb(240, 248, 255)
+  Note over App,SDK: Provider mount → bootstrap
+  App->>R: <matrixReact.Provider/>
+  R->>A: configureSessionStorageKey
+  R->>A: primeMatrixState
+  A->>T: scope.resolve(writableAtoms)
+  A->>T: scope.resolve(readinessAtom)
+  A-->>R: controllers ready
+  R->>A: bootstrapMatrix
+  A->>T: loadSession(storageKey)
+  A->>A: start(session)
+  A->>C: createMatrixClient
+  C->>SDK: createClient
+  C->>SDK: initRustCrypto
+  C->>SDK: startClient + waitForPrepared
+  C->>C: startPeerKeyShare
+  C->>SDK: crypto.checkKeyBackupAndEnable
+  C->>SDK: crypto.restoreKeyBackup
+  A->>SDK: attachListeners (Sync, Crypto, HttpApi)
+  SDK-->>A: ClientEvent.Sync / CryptoEvent.*
+  A->>T: sync.set / crypto.set / lastSynced.set / pendingBackup.set
+  T-->>R: useAtom() emits
+  R-->>App: useMatrix() values
+  end
 
-## Recovery-key unlock: one call, six SDK calls
+  rect rgb(240, 255, 240)
+  Note over App,SDK: matrixReact.signIn
+  App->>R: signIn(input)
+  R->>A: signIn
+  A->>C: loginWithPassword
+  C->>SDK: tmp.loginRequest(m.login.password)
+  SDK-->>C: access_token + user_id + device_id
+  A->>A: localStorage.setItem(session)
+  A->>A: start(session)
+  end
 
-```mermaid
-%%{init: {'theme':'base','themeVariables':{'background':'#ffffff','primaryTextColor':'#000000','actorBkg':'#ffffff','actorBorder':'#f59e0b','actorTextColor':'#000000','actorLineColor':'#000000','signalColor':'#ec4899','signalTextColor':'#000000','sequenceNumberColor':'#ffffff','noteBkgColor':'#ffffff','noteBorderColor':'#a855f7','noteTextColor':'#000000','labelBoxBkgColor':'#ffffff','labelBoxBorderColor':'#000000','labelTextColor':'#000000','fontFamily':'system-ui'}}}%%
-sequenceDiagram
-  autonumber
-  participant UI
-  participant MC as matrix-client
-  participant SDK as matrix-js-sdk crypto
-  participant SS as Secret Storage
-  participant KB as Key Backup
+  rect rgb(255, 248, 240)
+  Note over App,SDK: matrixReact.signOut
+  App->>R: signOut
+  R->>A: signOut
+  A->>T: pendingBackup.get
+  A->>A: teardownClient
+  A->>SDK: client.logout / stopClient / clearStores
+  A->>C: wipeLocalMatrixData
+  C->>C: clearCachedSecurityKey
+  A->>T: resetState
+  end
 
-  UI->>MC: unlockWithSecurityKey key
-  MC->>SDK: decodeRecoveryKey
-  MC->>SS: getDefaultKeyId + checkKey
-  Note over MC: caches key in module-local getSecretStorageKey callback
-  MC->>SDK: bootstrapCrossSigning
-  MC->>SDK: crossSignDevice deviceId
-  Note over MC,SDK: bootstrap is a no-op if CS already exists so we sign this device explicitly
-  MC->>KB: checkKeyBackupAndEnable
-  MC->>SDK: loadSessionBackupPrivateKeyFromSecretStorage
-  MC->>KB: restoreKeyBackup
-  MC->>SDK: room.decryptAllEvents for every room
-  MC-->>UI: crossSigningReady, secretStorageReady, keyBackupRestored
+  rect rgb(255, 240, 248)
+  Note over App,SDK: matrixCrypto.generateRecoveryKey
+  App->>C: generateRecoveryKey(client, {password})
+  C->>SDK: crypto.createRecoveryKeyFromPassphrase
+  C->>SDK: crypto.bootstrapCrossSigning (setupNew, UIA)
+  C->>SDK: crypto.bootstrapSecretStorage (setupNewKeyBackup)
+  C->>SDK: secretStorage.getDefaultKeyId
+  C-->>App: { recoveryKey }
+  end
+
+  rect rgb(248, 240, 255)
+  Note over App,SDK: matrixCrypto.unlockWithSecurityKey
+  App->>C: unlockWithSecurityKey(client, recoveryKey)
+  C->>C: cacheSecurityKey (decodeRecoveryKey + checkKey)
+  C->>SDK: crypto.bootstrapCrossSigning
+  C->>SDK: crypto.crossSignDevice(deviceId)
+  C->>SDK: crypto.checkKeyBackupAndEnable
+  C->>SDK: crypto.loadSessionBackupPrivateKeyFromSecretStorage
+  C->>SDK: crypto.restoreKeyBackup
+  C->>SDK: room.decryptAllEvents (∀ rooms)
+  C-->>App: UnlockOutcome
+  App->>R: markKeyUnlocked
+  R->>T: keyUnlocked.set(true)
+  T-->>R: readinessAtom recomputes
+  end
+
+  rect rgb(248, 255, 248)
+  Note over App,SDK: matrixReact.resetBackup
+  App->>R: resetBackup(recoveryKey)
+  R->>A: resetBackup
+  A->>C: cacheSecurityKey
+  A->>SDK: crypto.resetKeyBackup
+  A->>SDK: crypto.loadSessionBackupPrivateKeyFromSecretStorage
+  A->>C: refreshCryptoStatus → getStatus
+  A->>SDK: room.decryptAllEvents (∀ rooms)
+  A->>T: keyUnlocked.set(true)
+  end
+
+  rect rgb(255, 252, 235)
+  Note over App,SDK: matrixCrypto.requestKeyFromPeers
+  App->>C: requestKeyFromPeers({fromUserId, roomId, sessionId, senderKey})
+  C->>SDK: crypto.getUserDeviceInfo([fromUserId])
+  C->>C: setState(sessionId, "requesting")
+  C->>SDK: sendToDevice(m.app.key_request, devices)
+  SDK-->>C: toDeviceEvent(m.app.key_forward)
+  C->>SDK: crypto.importRoomKeysAsJson
+  C->>SDK: room.decryptAllEvents
+  C->>C: setState(sessionId, "imported")
+  end
+
+  rect rgb(235, 252, 255)
+  Note over App,SDK: matrixPatient.create
+  App->>C: matrixPatient.create(client, input, {inviteUserIds})
+  C->>SDK: client.createRoom (encrypted, private)
+  C->>SDK: client.setRoomTag(PATIENT_TAG)
+  C->>SDK: crypto.getUserDeviceInfo([self, …invitees])
+  C->>SDK: sendEvent(PATIENT_RECORD_EVENT_TYPE)
+  C->>SDK: sendStateEvent(PROFILE_THREAD_STATE_TYPE, {rootEventId})
+  C->>SDK: ensureSessionInBackup → backupManager.maybeUploadKey + waitForBackupDrain
+  C-->>App: roomId
+  end
+
+  rect rgb(252, 235, 252)
+  Note over App,SDK: matrixPatient.update
+  App->>C: matrixPatient.update(client, roomId, input)
+  C->>SDK: room.currentState.getStateEvents(PROFILE_THREAD)
+  C->>SDK: sendEvent(PATIENT_RECORD, m.relates_to=thread)
+  C->>SDK: client.setRoomName(derived)
+  C->>SDK: ensureSessionInBackup
+  end
+
+  rect rgb(255, 240, 240)
+  Note over App,SDK: matrixPatient.acceptInvite / declineInvite
+  App->>C: acceptPatientInvite(client, roomId)
+  C->>SDK: client.joinRoom
+  C->>SDK: client.setRoomTag(PATIENT_TAG)
+  App->>C: declinePatientInvite(client, roomId)
+  C->>SDK: client.leave
+  end
+
+  rect rgb(240, 240, 255)
+  Note over App,SDK: matrixMessage.send / list
+  App->>C: matrixMessage.send(client, roomId, body)
+  C->>SDK: client.sendEvent(m.room.message)
+  C->>SDK: ensureSessionInBackup
+  App->>C: matrixMessage.list(client, roomId)
+  C->>SDK: room.getLiveTimeline().getEvents()
+  C-->>App: MatrixEvent[]
+  end
+
+  rect rgb(240, 255, 252)
+  Note over App,SDK: matrixRooms.subscribe / exportEvents
+  App->>C: subscribeRooms(client, cb)
+  C->>SDK: on(ClientEvent.Room, RoomEvent.Timeline/Tags/Name, MatrixEventEvent.Decrypted)
+  SDK-->>C: room/timeline/decrypted events
+  C-->>App: cb()
+  App->>C: exportRoomEvents(client, roomId)
+  C->>SDK: room.getLiveTimeline + currentState.events
+  C-->>App: { timeline, state }
+  end
 ```
 
 ## Install & usage
 
 ```tsx
-import { MatrixProvider, useMatrix } from "matrix-client/react";
-import { listPatients, createPatient } from "matrix-client/patients";
+import { matrixReact } from "matrix-client/react";
+import { matrixPatient } from "matrix-client/patient";
 
 function App({ children }) {
-  return <MatrixProvider>{children}</MatrixProvider>;
+  return <matrixReact.Provider>{children}</matrixReact.Provider>;
 }
 
 function PatientList() {
-  const { client, ready } = useMatrix();
+  const { client, ready } = matrixReact.useMatrix();
   if (!ready || !client) return null;
-  const patients = listPatients(client);
+  const patients = matrixPatient.list(client);
   return (
     <ul>
       {patients.map((p) => (

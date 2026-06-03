@@ -1,12 +1,13 @@
 ---
 id: c3-210
-c3-seal: 78419724571a00a09e116b1bb571560876340c80e9daf5579f4597b4e189342c
+c3-seal: f5cd075fe5e88e953c1bc89d3343305d03c277c7456e90e2854b8e74b7f61cbd
 title: patients-domain
 type: component
 category: feature
 parent: c3-2
 goal: Implement the "rooms-as-records" domain over `matrix-js-sdk`. Owns every patient-record CRUD primitive (`createPatient`, `updatePatient`, `deletePatient`, `listPatients`, `getPatient`), profile-thread reconstruction (`listPatientHistory`), encrypted timeline access (`listMessages`, `sendMessage`), JSON export (`exportRoomEvents`), invite enumeration + accept/decline (`listPendingInvites`, `acceptPatientInvite`, `declinePatientInvite`), and the `ensureSessionInBackup` durability gate.
 uses:
+    - ref-encrypted-attachments
     - ref-matrix-js-sdk
     - ref-room-per-patient
     - rule-no-data-migration
@@ -59,6 +60,7 @@ Non-goals: React state (delegated to c3-211 matrix-provider and c3-212 patient-i
 | ref-matrix-js-sdk | ref | SDK boundary | hard | This module owns the largest fraction of SDK calls in the codebase. |
 | rule-no-data-migration | rule | Shape evolution | hard | PatientRecord evolves directly; no version field; no compat shims. |
 | rule-no-direct-sdk-import | rule | Web isolation | hard | All UI consumers go through matrix-client/patients. |
+| ref-encrypted-attachments | ref | Compliance target added by c3x wire; refine what must be reviewed or complied with before handoff. | wired compliance target beats uncited local prose | Added by c3x wire for explicit compliance review. |
 
 ## Contract
 

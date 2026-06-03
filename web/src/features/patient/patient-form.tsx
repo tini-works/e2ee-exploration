@@ -1,6 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import {
+  useForm,
+  type FieldErrors,
+  type FieldValues,
+  type UseFormRegister,
+} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,18 +21,38 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMatrix } from "matrix-client/react";
-import {
-  createPatient,
-  updatePatient,
-  type PatientRecord,
-} from "matrix-client/patient";
+import { matrixReact } from "matrix-client/react";
+import { matrixPatient } from "matrix-client/patient";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { toast } from "sonner";
 
-type FormValues = Omit<PatientRecord, "updatedAt" | "updatedTimes">;
+const MATRIX_ID_RE = /^@[^:\s]+:[^:\s]+$/;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-const EMPTY: FormValues = {
+const recordSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  dob: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
+  email: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || EMAIL_RE.test(v), "Enter a valid email address"),
+  notes: z.string().optional(),
+});
+
+const newPatientSchema = recordSchema.extend({
+  invite: z
+    .string()
+    .trim()
+    .regex(MATRIX_ID_RE, "Enter a valid Matrix user ID (e.g. @alice:example.org)"),
+});
+
+type RecordValues = z.infer<typeof recordSchema>;
+type NewPatientValues = z.infer<typeof newPatientSchema>;
+
+const EMPTY_RECORD: RecordValues = {
   firstName: "",
   lastName: "",
   dob: "",
@@ -33,15 +61,18 @@ const EMPTY: FormValues = {
   notes: "",
 };
 
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
+}
+
 function PatientFormFields({
-  values,
-  onChange,
+  register,
+  errors,
 }: {
-  values: FormValues;
-  onChange: (next: FormValues) => void;
+  register: UseFormRegister<FieldValues>;
+  errors: FieldErrors<FieldValues>;
 }) {
-  const set = <K extends keyof FormValues>(k: K, v: FormValues[K]) =>
-    onChange({ ...values, [k]: v });
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
@@ -49,38 +80,29 @@ function PatientFormFields({
           <Label htmlFor="firstName">First name</Label>
           <Input
             id="firstName"
-            value={values.firstName}
-            onChange={(e) => set("firstName", e.target.value)}
-            required
+            aria-invalid={!!errors.firstName}
+            {...register("firstName")}
           />
+          <FieldError message={errors.firstName?.message as string | undefined} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="lastName">Last name</Label>
           <Input
             id="lastName"
-            value={values.lastName}
-            onChange={(e) => set("lastName", e.target.value)}
-            required
+            aria-invalid={!!errors.lastName}
+            {...register("lastName")}
           />
+          <FieldError message={errors.lastName?.message as string | undefined} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="dob">Date of birth</Label>
-          <Input
-            id="dob"
-            type="date"
-            value={values.dob ?? ""}
-            onChange={(e) => set("dob", e.target.value)}
-          />
+          <Input id="dob" type="date" {...register("dob")} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={values.phone ?? ""}
-            onChange={(e) => set("phone", e.target.value)}
-          />
+          <Input id="phone" {...register("phone")} />
         </div>
       </div>
       <div className="space-y-2">
@@ -88,70 +110,70 @@ function PatientFormFields({
         <Input
           id="email"
           type="email"
-          value={values.email ?? ""}
-          onChange={(e) => set("email", e.target.value)}
+          aria-invalid={!!errors.email}
+          {...register("email")}
         />
+        <FieldError message={errors.email?.message as string | undefined} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <textarea
           id="notes"
-          value={values.notes ?? ""}
-          onChange={(e) => set("notes", e.target.value)}
           rows={3}
           className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          {...register("notes")}
         />
       </div>
     </>
   );
 }
 
-const MATRIX_ID_RE = /^@[^:\s]+:[^:\s]+$/;
-
 export function NewPatientDialog({ onCreated }: { onCreated?: () => void }) {
-  const { client, ready, notReadyReason } = useMatrix();
+  const { client, ready, notReadyReason } = matrixReact.useMatrix();
   const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [values, setValues] = useState<FormValues>(EMPTY);
-  const [inviteInput, setInviteInput] = useState("");
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<NewPatientValues>({
+    resolver: zodResolver(newPatientSchema),
+    defaultValues: { invite: "", ...EMPTY_RECORD },
+  });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const onSubmit = handleSubmit(async (data) => {
     if (!client || !ready) return;
-    const inviteId = inviteInput.trim();
-    if (inviteId && !MATRIX_ID_RE.test(inviteId)) {
-      toast.error(
-        `Not a valid Matrix user ID: ${inviteId}. Expected @user:server.`,
-      );
-      return;
-    }
-    setSubmitting(true);
+    const { invite, ...record } = data;
     try {
-      await createPatient(client, values, {
-        inviteUserIds: inviteId ? [inviteId] : [],
+      await matrixPatient.create(client, record, {
+        inviteUserIds: [invite],
       });
-      const display = `${values.firstName} ${values.lastName}`.trim();
-      toast.success(
-        inviteId
-          ? `Patient room created for ${display}; invited ${inviteId}.`
-          : `Patient room created for ${display}`,
-      );
-      setValues(EMPTY);
-      setInviteInput("");
+      const display = `${record.firstName} ${record.lastName}`.trim();
+      toast.success(`Patient room created for ${display}; invited ${invite}.`);
+      reset({ invite: "", ...EMPTY_RECORD });
       setOpen(false);
       onCreated?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset({ invite: "", ...EMPTY_RECORD });
+      }}
+    >
       <DialogTrigger
         render={
-          <Button disabled={!ready} title={notReadyMessage(notReadyReason) || undefined}>
+          <Button
+            disabled={!ready}
+            title={notReadyMessage(notReadyReason) || undefined}
+          >
             New patient
           </Button>
         }
@@ -164,34 +186,33 @@ export function NewPatientDialog({ onCreated }: { onCreated?: () => void }) {
               Creates an end-to-end encrypted Matrix room for this patient.
             </DialogDescription>
           </DialogHeader>
-          <PatientFormFields values={values} onChange={setValues} />
           <div className="space-y-2">
-            <Label htmlFor="invite">Invite Matrix user (optional)</Label>
+            <Label htmlFor="invite">Patient Matrix user</Label>
             <Input
               id="invite"
-              value={inviteInput}
-              onChange={(e) => setInviteInput(e.target.value)}
               placeholder="@alice:example.org"
               autoComplete="off"
               spellCheck={false}
+              aria-invalid={!!errors.invite}
+              {...register("invite")}
             />
+            <FieldError message={errors.invite?.message} />
             <p className="text-xs text-muted-foreground">
-              They&apos;ll be invited to the room and can decrypt every
-              message from creation onward.
+              The patient is invited to the room and can decrypt every message
+              from creation onward.
             </p>
           </div>
+          <PatientFormFields
+            register={register as unknown as UseFormRegister<FieldValues>}
+            errors={errors as FieldErrors<FieldValues>}
+          />
           <DialogFooter>
             <Button
               type="submit"
-              disabled={
-                submitting ||
-                !values.firstName.trim() ||
-                !values.lastName.trim() ||
-                !ready
-              }
+              disabled={isSubmitting || !ready}
               title={notReadyMessage(notReadyReason) || undefined}
             >
-              {submitting ? "Creating…" : "Create patient"}
+              {isSubmitting ? "Creating…" : "Create patient"}
             </Button>
           </DialogFooter>
         </form>
@@ -206,10 +227,10 @@ export function EditPatientDialog({
   onUpdated,
 }: {
   roomId: string;
-  initial: FormValues;
+  initial: RecordValues;
   onUpdated?: () => void;
 }) {
-  const { ready, notReadyReason } = useMatrix();
+  const { ready, notReadyReason } = matrixReact.useMatrix();
   const [open, setOpen] = useState(false);
 
   return (
@@ -247,27 +268,30 @@ function EditPatientForm({
   onDone,
 }: {
   roomId: string;
-  initial: FormValues;
+  initial: RecordValues;
   onDone: () => void;
 }) {
-  const { client, ready, notReadyReason } = useMatrix();
-  const [values, setValues] = useState<FormValues>(initial);
-  const [submitting, setSubmitting] = useState(false);
+  const { client, ready, notReadyReason } = matrixReact.useMatrix();
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<RecordValues>({
+    resolver: zodResolver(recordSchema),
+    defaultValues: initial,
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
     if (!client || !ready) return;
-    setSubmitting(true);
     try {
-      await updatePatient(client, roomId, values);
+      await matrixPatient.update(client, roomId, values);
       toast.success("Profile updated");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -278,19 +302,17 @@ function EditPatientForm({
           for audit.
         </DialogDescription>
       </DialogHeader>
-      <PatientFormFields values={values} onChange={setValues} />
+      <PatientFormFields
+        register={register as unknown as UseFormRegister<FieldValues>}
+        errors={errors as FieldErrors<FieldValues>}
+      />
       <DialogFooter>
         <Button
           type="submit"
-          disabled={
-                submitting ||
-                !values.firstName.trim() ||
-                !values.lastName.trim() ||
-                !ready
-              }
+          disabled={isSubmitting || !ready}
           title={notReadyMessage(notReadyReason) || undefined}
         >
-          {submitting ? "Saving…" : "Save changes"}
+          {isSubmitting ? "Saving…" : "Save changes"}
         </Button>
       </DialogFooter>
     </form>

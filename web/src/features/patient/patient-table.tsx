@@ -26,15 +26,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMatrix } from "matrix-client/react";
-import { exportRoomEvents, subscribeRooms } from "matrix-client/rooms";
-import {
-  deletePatient,
-  fullName,
-  listPatientHistory,
-  listPatients,
-  type Patient,
-} from "matrix-client/patient";
+import { matrixReact } from "matrix-client/react";
+import { matrixRooms } from "matrix-client/rooms";
+import { matrixPatient, type MatrixPatient } from "matrix-client/patient";
 import { notReadyMessage } from "@/lib/not-ready-message";
 import { NewPatientDialog } from "./patient-form";
 import { toast } from "sonner";
@@ -69,8 +63,8 @@ function downloadJson(filename: string, data: unknown) {
 }
 
 export function PatientTable() {
-  const { client, session, ready, notReadyReason } = useMatrix();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const { client, session, ready, notReadyReason } = matrixReact.useMatrix();
+  const [patients, setPatients] = useState<MatrixPatient[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{
     roomId: string;
     name: string;
@@ -79,16 +73,16 @@ export function PatientTable() {
 
   useEffect(() => {
     if (!client) return;
-    const refresh = () => setPatients(listPatients(client));
+    const refresh = () => setPatients(matrixPatient.list(client));
     refresh();
-    return subscribeRooms(client, refresh);
+    return matrixRooms.subscribe(client, refresh);
   }, [client]);
 
   const confirmDelete = async () => {
     if (!client || !ready || !pendingDelete) return;
     setDeleting(true);
     try {
-      await deletePatient(client, pendingDelete.roomId);
+      await matrixPatient.remove(client, pendingDelete.roomId);
       toast.success(`Removed ${pendingDelete.name}`);
       setPendingDelete(null);
     } catch (err) {
@@ -102,11 +96,12 @@ export function PatientTable() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Patients</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            Patients
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Signed in as{" "}
-            <span className="font-mono">{session?.userId}</span> · each row is
-            an E2E-encrypted Matrix room.
+            Signed in as <span className="font-mono">{session?.userId}</span> ·
+            each row is an E2E-encrypted Matrix room.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -114,7 +109,7 @@ export function PatientTable() {
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -146,7 +141,7 @@ export function PatientTable() {
                     href={`/patients/${encodeURIComponent(p.roomId)}`}
                     className="hover:underline"
                   >
-                    {fullName(p.record)}
+                    {matrixPatient.fullName(p.record)}
                   </Link>
                 </TableCell>
                 <TableCell>{p.record.dob || "—"}</TableCell>
@@ -202,13 +197,16 @@ export function PatientTable() {
                         <DropdownMenuItem
                           onClick={() => {
                             if (!client) return;
-                            const history = listPatientHistory(
+                            const history = matrixPatient.listHistory(
                               client,
                               p.roomId,
                             );
-                            const events = exportRoomEvents(client, p.roomId);
+                            const events = matrixRooms.exportEvents(
+                              client,
+                              p.roomId,
+                            );
                             downloadJson(
-                              `patient-${slugify(fullName(p.record))}-${p.roomId.slice(1, 11)}.json`,
+                              `patient-${slugify(matrixPatient.fullName(p.record))}-${p.roomId.slice(1, 11)}.json`,
                               {
                                 exportedAt: new Date().toISOString(),
                                 roomId: p.roomId,
@@ -225,7 +223,7 @@ export function PatientTable() {
                           onClick={() =>
                             setPendingDelete({
                               roomId: p.roomId,
-                              name: fullName(p.record),
+                              name: matrixPatient.fullName(p.record),
                             })
                           }
                           variant="destructive"
