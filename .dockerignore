@@ -1,0 +1,18 @@
+# Build context for dokploy/web/Dockerfile is the repo root — keep it lean
+# and keep secrets/artifacts out of the image.
+node_modules
+**/node_modules
+.git
+.next
+**/.next
+out
+**/out
+.env*
+**/.env*
+!**/.env.example
+*.tsbuildinfo
+.vercel
+dokploy
+docker
+docs
+.c3

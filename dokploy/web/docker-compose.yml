@@ -1,0 +1,45 @@
+# Next.js web app for Dokploy (compose app).
+#
+# Built from ../../ (repo root) via ./Dockerfile — the app is an npm workspace
+# and depends on packages/matrix-client, so the whole repo is the build context.
+#
+# Set in Dokploy's Environment tab:
+#   WEB_DOMAIN              public domain (Traefik route)
+#   S3_BUCKET               bucket for encrypted attachments
+#   AWS_ACCESS_KEY_ID       S3 credentials
+#   AWS_SECRET_ACCESS_KEY   S3 credentials
+#   S3_REGION               optional, defaults to us-east-1
+#   S3_ENDPOINT             optional, S3-compatible stores (enables path-style)
+#   PRESIGN_TTL_SECONDS     optional, defaults to 300
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: dokploy/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      PRESIGN_TTL_SECONDS: ${PRESIGN_TTL_SECONDS:-300}
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.e2ee-web.rule=Host(`${WEB_DOMAIN}`)
+      - traefik.http.routers.e2ee-web.entrypoints=websecure
+      - traefik.http.routers.e2ee-web.tls.certresolver=letsencrypt
+      - traefik.http.services.e2ee-web.loadbalancer.server.port=3000
+
+networks:
+  dokploy-network:
+    external: true

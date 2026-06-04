@@ -18,9 +18,8 @@
 #   POSTGRES_DB                  optional, defaults to "synapse"
 #   POSTGRES_PORT                optional, defaults to 5432
 #
-# Create the first user from Dokploy's web terminal:
-#   register_new_matrix_user -u alice -p alicepass -a \
-#     -c /data/homeserver.yaml http://localhost:8008
+# Registration is open (enable_registration_without_verification), so users
+# sign up from the app — no manual account creation needed.
 
 services:
   synapse:
