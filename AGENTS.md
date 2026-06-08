@@ -12,6 +12,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - We are developing features, so don't have to worry about migration data (We can delete records and start from scratch).
 - Never use `matrix-js-sdk` directly in the app, use `matrix-client` instead - it's a wrapper around `matrix-js-sdk`.
 - For cases un-decrypted messages, display enough information to fix the issue. Especially a one sees full message, but other get un-decrypted messages.
+- Do not use system icons, create svg icons.
+- All forms have to use pumped-fn form: `import { scopedValue, useScopedValue } from "@pumped-fn/lite-react";`
 
 ## Features
 

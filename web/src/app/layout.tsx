@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { MatrixProvider } from "matrix-client/react";
+import { MatrixDevtools } from "@/components/matrix-devtools";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,7 +26,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <MatrixProvider>{children}</MatrixProvider>
+            <MatrixProvider>
+              {children}
+              <MatrixDevtools />
+            </MatrixProvider>
           </TooltipProvider>
           <Toaster />
         </ThemeProvider>

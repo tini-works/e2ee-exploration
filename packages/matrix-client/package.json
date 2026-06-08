@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./react": "./src/react/index.ts",
+    "./state": "./src/state/registry.ts",
     "./patient": "./src/features/patient.ts",
     "./message": "./src/features/message.ts",
     "./attachment": "./src/features/attachment.ts",
