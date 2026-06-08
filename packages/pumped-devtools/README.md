@@ -2,13 +2,19 @@
 
 A zero-config, floating **chat-bubble inspector** for [`@pumped-fn/lite-react`](https://www.npmjs.com/package/@pumped-fn/lite-react). Drop it inside a `ScopeProvider` and watch atoms, forms, and the reactive cascade in real time.
 
-![pumped-devtools inspecting an encrypted chat app](../../docs/pumped-devtools.png)
-
 Collapsed it's a round button with a change-count badge; expanded it's a resizable panel with three tabs:
 
-- **State** — each atom's lifecycle (`idle / resolving / resolved / failed`) and value preview.
-- **Forms** — each watched `scopedValue` with a change counter (`×n`) and action invocations (`⚡n`).
-- **Flow** — a chat feed of every transition, newest last, making the reactive cascade visible.
+**State** — each atom's lifecycle (`idle / resolving / resolved / failed`) and value preview.
+
+![State tab](../../docs/pumped-state.png)
+
+**Forms** — each watched `scopedValue` with a change counter (`×n`) and action invocations (`⚡n`).
+
+![Forms tab](../../docs/pumped-forms.png)
+
+**Flow** — a chat feed of every transition, newest last, making the reactive cascade visible.
+
+![Flow tab](../../docs/pumped-flow.png)
 
 No CSS dependency, owns nothing in your app. UI state (tab, side, size) persists across reloads.
 
