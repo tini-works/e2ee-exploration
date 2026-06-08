@@ -11,7 +11,7 @@ const ico = {
 };
 
 export const IconBubble = () => (
-  <svg viewBox="0 0 24 24" {...ico} width={24} height={24}>
+  <svg viewBox="0 0 24 24" {...ico} width={20} height={20}>
     <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z" />
   </svg>
 );
