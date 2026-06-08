@@ -21,5 +21,13 @@ export const T = {
 export const soft = (color: string, pct = 16): string =>
   `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 
-/** Semantic lifecycle hues the app palette doesn't define (settled / in-flight). */
-export const SEM = { green: "#34d399", amber: "#fbbf24" } as const;
+/**
+ * Semantic hues the app palette doesn't define: settled / in-flight (atoms),
+ * plus cyan (scopedValue state patches) and violet (action invocations).
+ */
+export const SEM = {
+  green: "#34d399",
+  amber: "#fbbf24",
+  cyan: "#22d3ee",
+  violet: "#a78bfa",
+} as const;

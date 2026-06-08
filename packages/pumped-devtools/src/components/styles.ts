@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { soft, T } from "./theme";
+import { SEM, soft, T } from "./theme";
 
 export const mono = `var(--font-mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace)`;
 export const sans = `var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif)`;
@@ -77,14 +77,6 @@ export const S = {
     padding: "12px 14px",
     borderBottom: `1px solid ${T.border}`,
   },
-  brandDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    background: T.primary,
-    boxShadow: `0 0 10px ${soft(T.primary, 80)}`,
-    flexShrink: 0,
-  },
   title: { fontSize: 13, fontWeight: 700, lineHeight: 1.2 },
   subtitle: { fontSize: 11, color: T.muted, marginTop: 2 },
   tabs: { display: "flex", gap: 4, padding: "8px 10px", borderBottom: `1px solid ${T.border}` },
@@ -137,6 +129,8 @@ export const S = {
   pill: { display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 8px", borderRadius: 20, fontSize: 10.5, fontWeight: 600 },
   pillDot: { width: 6, height: 6, borderRadius: 3 },
   changeChip: { fontSize: 10.5, fontWeight: 700, color: T.primary, background: soft(T.primary, 14), padding: "2px 7px", borderRadius: 20 },
+  actionChip: { fontSize: 10.5, fontWeight: 700, color: SEM.violet, background: soft(SEM.violet, 16), padding: "2px 7px", borderRadius: 20 },
+  disposedChip: { fontSize: 10, fontWeight: 700, color: T.muted, background: soft(T.muted, 16), padding: "2px 7px", borderRadius: 20 },
 
   // chat
   msg: { display: "flex", gap: 9, alignItems: "flex-start" },
@@ -146,6 +140,7 @@ export const S = {
   kindTag: { fontSize: 9.5, fontWeight: 700, padding: "1px 6px", borderRadius: 6, textTransform: "uppercase", letterSpacing: ".03em" },
   msgTime: { fontSize: 10, color: T.faint, marginLeft: "auto", flexShrink: 0, fontFamily: mono },
   bubble: { background: soft(T.fg, 4), border: "1px solid", borderRadius: "4px 12px 12px 12px", padding: "7px 10px", fontSize: 11.5, lineHeight: 1.5, wordBreak: "break-word" },
+  detail: { fontSize: 10, color: T.faint, marginTop: 4, fontFamily: mono },
   prevVal: { fontFamily: mono, color: T.faint, textDecoration: "line-through", opacity: 0.85 },
   nextVal: { fontFamily: mono, color: T.code },
   errVal: { fontFamily: mono, color: T.danger },

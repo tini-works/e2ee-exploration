@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { Lite } from "@pumped-fn/lite";
 import { usePumpedFeed } from "./use-pumped-feed";
 import { usePersistedState } from "./use-persisted-state";
-import type { AtomRegistry } from "./types";
+import type { AtomRegistry, ScopedValueRegistry } from "./types";
 import { S } from "./components/styles";
 import { StyleOnce } from "./components/style-once";
 import { Fab } from "./components/fab";
@@ -21,10 +21,14 @@ const decodeSide = (raw: string): DevtoolsSide | undefined =>
   raw === "left" || raw === "right" ? raw : undefined;
 const decodeSize = (raw: string): DevtoolsSize | undefined =>
   (SIZE_ORDER as string[]).includes(raw) ? (raw as DevtoolsSize) : undefined;
+const decodeTab = (raw: string): Tab | undefined =>
+  raw === "state" || raw === "forms" || raw === "flow" ? raw : undefined;
 
 export interface PumpedDevtoolsProps {
   /** label -> atom map to watch. Atoms are nameless, so labels come from here. */
   atoms: AtomRegistry;
+  /** label -> scopedValue map to watch (form state + action invocations). */
+  scopedValues?: ScopedValueRegistry;
   /** Heading shown in the panel. Default "pumped-fn". */
   title?: string;
   /** Bottom corner to dock to initially (toggle live from the header). Default "left". */
@@ -47,6 +51,7 @@ export interface PumpedDevtoolsProps {
  */
 export function PumpedDevtools({
   atoms,
+  scopedValues,
   title = "pumped-fn",
   side: initialSide = "left",
   size: initialSize = "md",
@@ -54,9 +59,17 @@ export function PumpedDevtools({
   defaultOpen = false,
   scope,
 }: PumpedDevtoolsProps) {
-  const { state, clear } = usePumpedFeed(atoms, { maxEvents, scope });
-  const [tab, setTab] = useState<Tab>("flow");
-  // Open/closed, position + size all persist across reloads, scoped to title.
+  const { state, clear } = usePumpedFeed(atoms, {
+    maxEvents,
+    scope,
+    scopedValues,
+  });
+  // Open/closed, selected tab, position + size all persist across reloads, scoped to title.
+  const [tab, setTab] = usePersistedState<Tab>(
+    `pumped-devtools:${title}:tab`,
+    "flow",
+    decodeTab,
+  );
   const [openRaw, setOpenRaw] = usePersistedState<"1" | "0">(
     `pumped-devtools:${title}:open`,
     defaultOpen ? "1" : "0",
@@ -92,11 +105,11 @@ export function PumpedDevtools({
       <div style={{ ...S.root, ...dock }}>
         {open && (
           <Panel
-            title={title}
             side={side}
             size={size}
             tab={tab}
             atoms={state.atoms}
+            forms={state.forms}
             events={state.events}
             onTab={setTab}
             onClear={clear}

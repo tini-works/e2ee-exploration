@@ -14,6 +14,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - For cases un-decrypted messages, display enough information to fix the issue. Especially a one sees full message, but other get un-decrypted messages.
 - Do not use system icons, create svg icons.
 - All forms have to use pumped-fn form: `import { scopedValue, useScopedValue } from "@pumped-fn/lite-react";`
+- Do not use `·`
 
 ## Features
 

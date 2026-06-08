@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { scopedValue, useScopedValue } from "@pumped-fn/lite-react";
 import { matrixReact } from "matrix-client/react";
 import { matrixCrypto } from "matrix-client/crypto";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,107 @@ import { toast } from "sonner";
  * after an actual login — but NOT on a plain page refresh.
  */
 export const RECOVERY_PROMPT_KEY = "patient-records:recovery-key-prompt";
+
+// Derive the matrix client type from the API rather than importing
+// matrix-js-sdk directly (project rule: go through matrix-client).
+type MatrixClient = Parameters<typeof matrixCrypto.unlockWithSecurityKey>[0];
+
+/**
+ * Recovery-key dialog form state in a pumped scopedValue: either entering an
+ * existing key (unlock) or generating a brand-new one. The actions take the
+ * `client` and `markKeyUnlocked` callback from the matrix provider.
+ */
+export const recoveryKeyForm = scopedValue({
+  name: "recovery-key-form",
+  initial: () => ({
+    keyValue: "",
+    genPassword: "",
+    generatedKey: null as string | null,
+    submitting: false,
+  }),
+  actions: ({ get, patch }) => ({
+    setKeyValue: (keyValue: string) => patch({ keyValue }),
+    setGenPassword: (genPassword: string) => patch({ genPassword }),
+    reset() {
+      patch({
+        keyValue: "",
+        genPassword: "",
+        generatedKey: null,
+        submitting: false,
+      });
+    },
+    async unlock(
+      client: MatrixClient,
+      markKeyUnlocked: () => void,
+    ): Promise<boolean> {
+      const key = get().keyValue.trim();
+      if (!key) return false;
+      patch({ submitting: true });
+      try {
+        const outcome = await matrixCrypto.unlockWithSecurityKey(client, key);
+        markKeyUnlocked();
+        const imported = outcome.keyBackupRestored?.imported ?? 0;
+        toast.success(
+          imported > 0
+            ? `Unlocked. Restored ${imported} message key${imported === 1 ? "" : "s"} from backup.`
+            : "Unlocked.",
+        );
+        return true;
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+        return false;
+      } finally {
+        patch({ submitting: false });
+      }
+    },
+    async generate(client: MatrixClient, markKeyUnlocked: () => void) {
+      const password = get().genPassword;
+      if (!password) return;
+      patch({ submitting: true });
+      try {
+        const { recoveryKey } = await matrixCrypto.generateRecoveryKey(client, {
+          password,
+        });
+        patch({ generatedKey: recoveryKey, genPassword: "" });
+        markKeyUnlocked();
+        toast.success("Recovery key generated. Save it before closing.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        patch({ submitting: false });
+      }
+    },
+  }),
+});
+
+/** Reset-key-backup dialog form state. */
+export const resetBackupForm = scopedValue({
+  name: "reset-backup-form",
+  initial: () => ({ securityKey: "", submitting: false }),
+  actions: ({ get, patch }) => ({
+    setSecurityKey: (securityKey: string) => patch({ securityKey }),
+    reset: () => patch({ securityKey: "", submitting: false }),
+    async submit(
+      resetBackup: (securityKey: string) => Promise<void>,
+    ): Promise<boolean> {
+      const key = get().securityKey.trim();
+      if (!key) return false;
+      patch({ submitting: true });
+      try {
+        await resetBackup(key);
+        toast.success(
+          "Backup reset. Other devices will re-upload their keys here.",
+        );
+        return true;
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+        return false;
+      } finally {
+        patch({ submitting: false });
+      }
+    },
+  }),
+});
 
 type RecoveryKeyContextValue = {
   openRecoveryKey: () => void;
@@ -50,16 +152,16 @@ export function RecoveryKeyProvider({
     matrixReact.useMatrix();
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [keying, setKeying] = useState(false);
-  const [keyValue, setKeyValue] = useState("");
-  const [genPassword, setGenPassword] = useState("");
   // null = still probing; true = SSSS exists (Enter mode); false = no SSSS.
   const [hasSSSS, setHasSSSS] = useState<boolean | null>(null);
-  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
-
   const [resetOpen, setResetOpen] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  const [resetSecurityKey, setResetSecurityKey] = useState("");
+
+  const recovery = useScopedValue(recoveryKeyForm);
+  const { keyValue, genPassword, generatedKey, submitting: keying } =
+    recovery.snapshot;
+  const reset = useScopedValue(resetBackupForm);
+  const { securityKey: resetSecurityKey, submitting: resetting } =
+    reset.snapshot;
 
   // Prompt for the recovery key once right after a sign-in (flagged by the
   // sign-in flow), but only while the store is still locked. A plain refresh
@@ -101,50 +203,18 @@ export function RecoveryKeyProvider({
 
   const closeKey = () => {
     setKeyOpen(false);
-    setKeyValue("");
-    setGenPassword("");
-    setGeneratedKey(null);
+    recovery.actions.reset();
   };
 
   const confirmKey = async () => {
-    if (!client || !keyValue.trim()) return;
-    setKeying(true);
-    try {
-      const outcome = await matrixCrypto.unlockWithSecurityKey(
-        client,
-        keyValue.trim(),
-      );
-      markKeyUnlocked();
-      const imported = outcome.keyBackupRestored?.imported ?? 0;
-      toast.success(
-        imported > 0
-          ? `Unlocked. Restored ${imported} message key${imported === 1 ? "" : "s"} from backup.`
-          : "Unlocked.",
-      );
-      closeKey();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setKeying(false);
-    }
+    if (!client) return;
+    const ok = await recovery.actions.unlock(client, markKeyUnlocked);
+    if (ok) closeKey();
   };
 
   const confirmGenerate = async () => {
-    if (!client || !genPassword) return;
-    setKeying(true);
-    try {
-      const { recoveryKey } = await matrixCrypto.generateRecoveryKey(client, {
-        password: genPassword,
-      });
-      setGeneratedKey(recoveryKey);
-      setGenPassword("");
-      markKeyUnlocked();
-      toast.success("Recovery key generated. Save it before closing.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setKeying(false);
-    }
+    if (!client) return;
+    await recovery.actions.generate(client, markKeyUnlocked);
   };
 
   const copyGenerated = async () => {
@@ -159,23 +229,12 @@ export function RecoveryKeyProvider({
 
   const closeReset = () => {
     setResetOpen(false);
-    setResetSecurityKey("");
+    reset.actions.reset();
   };
 
   const confirmReset = async () => {
-    if (!resetSecurityKey.trim()) return;
-    setResetting(true);
-    try {
-      await resetBackup(resetSecurityKey.trim());
-      toast.success(
-        "Backup reset. Other devices will re-upload their keys here.",
-      );
-      closeReset();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setResetting(false);
-    }
+    const ok = await reset.actions.submit(resetBackup);
+    if (ok) closeReset();
   };
 
   return (
@@ -240,7 +299,7 @@ export function RecoveryKeyProvider({
                 <PasswordInput
                   id="cache-security-key"
                   value={keyValue}
-                  onChange={(e) => setKeyValue(e.target.value)}
+                  onChange={(e) => recovery.actions.setKeyValue(e.target.value)}
                   placeholder="EsTz cDAu oLhr WV1d …"
                   autoComplete="off"
                   spellCheck={false}
@@ -283,7 +342,9 @@ export function RecoveryKeyProvider({
                 <PasswordInput
                   id="gen-password"
                   value={genPassword}
-                  onChange={(e) => setGenPassword(e.target.value)}
+                  onChange={(e) =>
+                    recovery.actions.setGenPassword(e.target.value)
+                  }
                   autoComplete="current-password"
                   disabled={keying}
                 />
@@ -342,7 +403,7 @@ export function RecoveryKeyProvider({
             <PasswordInput
               id="reset-security-key"
               value={resetSecurityKey}
-              onChange={(e) => setResetSecurityKey(e.target.value)}
+              onChange={(e) => reset.actions.setSecurityKey(e.target.value)}
               placeholder="EsTz cDAu oLhr WV1d …"
               autoComplete="off"
               spellCheck={false}

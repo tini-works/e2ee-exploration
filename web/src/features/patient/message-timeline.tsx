@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { scopedValue, useScopedValue } from "@pumped-fn/lite-react";
 import { MoreVertical, Paperclip } from "lucide-react";
 import type { MatrixEvent } from "matrix-client/message";
 import { matrixReact } from "matrix-client/react";
@@ -20,15 +21,45 @@ import { createS3AttachmentStore } from "./s3-attachment-store";
 import { AttachmentMessage } from "./attachment-message";
 import { UndecryptableMessage } from "./undecryptable-message";
 
+// Derive the matrix client type from the API rather than importing
+// matrix-js-sdk directly (project rule: go through matrix-client).
+type MatrixClient = Parameters<typeof matrixMessage.send>[0];
+
+/**
+ * Composer form state in a pumped scopedValue. The send action validates the
+ * draft and drives matrixMessage.send(); the React layer hands it the `client`
+ * and `roomId` since those live outside the scope.
+ */
+export const composerForm = scopedValue({
+  name: "message-composer",
+  initial: () => ({ text: "", sending: false, uploading: false }),
+  actions: ({ get, patch }) => ({
+    setText: (text: string) => patch({ text }),
+    setUploading: (uploading: boolean) => patch({ uploading }),
+    async send(client: MatrixClient, roomId: string) {
+      const body = get().text.trim();
+      if (!body || get().sending) return;
+      patch({ sending: true });
+      try {
+        await matrixMessage.send(client, roomId, body);
+        patch({ text: "" });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        patch({ sending: false });
+      }
+    },
+  }),
+});
+
 /** Encrypted message timeline + composer for one patient room. */
 export function MessageTimeline({ roomId }: { roomId: string }) {
   const { client, session, ready, notReadyReason } = matrixReact.useMatrix();
   const selfUserId = session?.userId ?? null;
 
   const [messages, setMessages] = useState<MatrixEvent[]>([]);
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const composer = useScopedValue(composerForm);
+  const { text, sending, uploading } = composer.snapshot;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,17 +86,9 @@ export function MessageTimeline({ roomId }: { roomId: string }) {
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [text]);
 
-  const submitMessage = async () => {
-    if (!client || !ready || !text.trim() || sending) return;
-    setSending(true);
-    try {
-      await matrixMessage.send(client, roomId, text.trim());
-      setText("");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSending(false);
-    }
+  const submitMessage = () => {
+    if (!client || !ready) return;
+    void composer.actions.send(client, roomId);
   };
 
   const onSend = (e: React.FormEvent) => {
@@ -85,7 +108,7 @@ export function MessageTimeline({ roomId }: { roomId: string }) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file
     if (!client || !ready || !file) return;
-    setUploading(true);
+    composer.actions.setUploading(true);
     const t = toast.loading(`Encrypting & uploading ${file.name}…`);
     try {
       await matrixAttachment.send(client, roomId, file, store, (loaded, total) =>
@@ -98,7 +121,7 @@ export function MessageTimeline({ roomId }: { roomId: string }) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err), { id: t });
     } finally {
-      setUploading(false);
+      composer.actions.setUploading(false);
     }
   };
 
@@ -249,7 +272,7 @@ export function MessageTimeline({ roomId }: { roomId: string }) {
           ref={textareaRef}
           rows={1}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => composer.actions.setText(e.target.value)}
           onKeyDown={onComposerKeyDown}
           placeholder={
             ready ? "Type a message…" : notReadyMessage(notReadyReason) || "Not ready"

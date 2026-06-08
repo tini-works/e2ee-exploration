@@ -24,8 +24,10 @@ export { PumpedFeedStore } from "./store";
 export { previewValue } from "./preview";
 export type {
   AtomRegistry,
+  ScopedValueRegistry,
   AtomLifecycle,
   AtomSnapshot,
+  FormSnapshot,
   FeedEvent,
   FeedEventKind,
   FeedOptions,

@@ -6,6 +6,10 @@ import { fmtTime } from "./format";
 /** One flow event as a chat message: avatar + label/kind/time + value bubble. */
 export function Message({ event }: { event: FeedEvent }) {
   const tone = KIND_TONE[event.kind];
+  // `value` (atom) and `form` (scopedValue) both render an old → new diff.
+  const isDiff =
+    (event.kind === "value" || event.kind === "form") &&
+    event.prev !== undefined;
   return (
     <div style={S.msg} className="pf-msg">
       <div style={{ ...S.avatar, background: tone.soft, color: tone.fg }}>
@@ -20,7 +24,14 @@ export function Message({ event }: { event: FeedEvent }) {
           <span style={S.msgTime}>{fmtTime(event.at)}</span>
         </div>
         <div style={{ ...S.bubble, borderColor: tone.border }}>
-          {event.kind === "value" && event.prev !== undefined ? (
+          {event.kind === "action" ? (
+            <code style={{ ...S.nextVal, color: tone.fg }}>
+              {event.action}
+              <span style={S.arrow}>(</span>
+              {event.value}
+              <span style={S.arrow}>)</span>
+            </code>
+          ) : isDiff ? (
             <span>
               <code style={S.prevVal}>{event.prev}</code>
               <span style={S.arrow}> → </span>
@@ -31,6 +42,7 @@ export function Message({ event }: { event: FeedEvent }) {
               {event.value}
             </code>
           )}
+          {event.detail && <div style={S.detail}>{event.detail}</div>}
         </div>
       </div>
     </div>

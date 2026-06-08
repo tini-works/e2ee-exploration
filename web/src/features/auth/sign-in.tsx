@@ -19,7 +19,7 @@ import { toast } from "sonner";
  * state) rather than a pile of useState. The submit action drives the
  * matrix-client signIn() directly.
  */
-const signInForm = scopedValue({
+export const signInForm = scopedValue({
   name: "sign-in-form",
   initial: () => ({
     baseUrl: DEFAULT_HOMESERVER_URL,

@@ -1,21 +1,22 @@
-import type { AtomSnapshot, FeedEvent } from "../types";
+import type { AtomSnapshot, FeedEvent, FormSnapshot } from "../types";
 import { S } from "./styles";
 import { SIZES, type DevtoolsSide, type DevtoolsSize } from "./sizes";
 import { IconButton } from "./icon-button";
 import { TabButton } from "./tab-button";
 import { StateView } from "./state-view";
+import { FormsView } from "./forms-view";
 import { FlowView } from "./flow-view";
 import { IconClose, IconDock, IconResize, IconTrash } from "./icons";
 
-export type Tab = "state" | "flow";
+export type Tab = "state" | "forms" | "flow";
 
 /** The expanded speech-bubble: header controls, tabs, and the active view. */
 export function Panel({
-  title,
   side,
   size,
   tab,
   atoms,
+  forms,
   events,
   onTab,
   onClear,
@@ -23,11 +24,11 @@ export function Panel({
   onSwapSide,
   onCycleSize,
 }: {
-  title: string;
   side: DevtoolsSide;
   size: DevtoolsSize;
   tab: Tab;
   atoms: AtomSnapshot[];
+  forms: FormSnapshot[];
   events: FeedEvent[];
   onTab: (t: Tab) => void;
   onClear: () => void;
@@ -37,15 +38,16 @@ export function Panel({
 }) {
   const dims = SIZES[size];
   const changed = atoms.filter((a) => a.changes > 0).length;
+  const hasForms = forms.length > 0;
   const target: DevtoolsSide = side === "left" ? "right" : "left";
   return (
     <div style={{ ...S.panel, width: dims.width, height: dims.height }} className="pf-pop">
       <header style={S.header}>
-        <div style={S.brandDot} />
         <div style={{ minWidth: 0 }}>
-          <div style={S.title}>{title} devtools</div>
+          <div style={S.title}>Inspector</div>
           <div style={S.subtitle}>
-            {atoms.length} atoms · {changed} changed · {events.length} events
+            {atoms.length} atoms · {changed} changed
+            {hasForms && ` · ${forms.length} forms`} · {events.length} events
           </div>
         </div>
         <div style={{ flex: 1 }} />
@@ -70,13 +72,22 @@ export function Panel({
         <TabButton active={tab === "state"} onClick={() => onTab("state")}>
           State
         </TabButton>
+        <TabButton active={tab === "forms"} onClick={() => onTab("forms")}>
+          Forms
+        </TabButton>
         <TabButton active={tab === "flow"} onClick={() => onTab("flow")}>
           Flow
         </TabButton>
       </nav>
 
       <div style={S.body}>
-        {tab === "state" ? <StateView atoms={atoms} /> : <FlowView events={events} />}
+        {tab === "state" ? (
+          <StateView atoms={atoms} />
+        ) : tab === "forms" ? (
+          <FormsView forms={forms} />
+        ) : (
+          <FlowView events={events} />
+        )}
       </div>
 
       <div style={{ ...S.tail, ...(side === "left" ? { left: 24 } : { right: 24 }) }} />

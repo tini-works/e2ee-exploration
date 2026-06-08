@@ -16,6 +16,9 @@ export const KIND_TONE: Record<FeedEventKind, { fg: string; soft: string; border
   resolving: { fg: SEM.amber, soft: soft(SEM.amber, 14), border: soft(SEM.amber, 26) },
   resolved: { fg: T.muted, soft: soft(T.muted, 16), border: soft(T.muted, 24) },
   failed: { fg: T.danger, soft: soft(T.danger, 16), border: soft(T.danger, 40) },
+  // scopedValue state patches (cyan) and action invocations (violet).
+  form: { fg: SEM.cyan, soft: soft(SEM.cyan, 16), border: soft(SEM.cyan, 32) },
+  action: { fg: SEM.violet, soft: soft(SEM.violet, 18), border: soft(SEM.violet, 36) },
 };
 
 export const KIND_TEXT: Record<FeedEventKind, string> = {
@@ -23,4 +26,6 @@ export const KIND_TEXT: Record<FeedEventKind, string> = {
   resolving: "resolving",
   resolved: "re-resolved",
   failed: "failed",
+  form: "patched",
+  action: "action",
 };
