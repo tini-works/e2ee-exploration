@@ -13,14 +13,6 @@ import {
   syncStateAtom,
 } from "./atoms";
 
-/**
- * Labelled view of the Matrix state graph, for devtools/inspection. pumped-fn
- * atoms are nameless, so this map is the single place that pairs each atom with
- * a readable label (kept in sync with the tracing labels in scope.ts).
- *
- *   import { matrixAtoms } from "matrix-client/state";
- *   <PumpedDevtools atoms={matrixAtoms} />
- */
 export const matrixAtoms = {
   sessionAtom,
   clientAtom,

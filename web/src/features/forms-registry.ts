@@ -10,10 +10,6 @@ import {
   resetBackupForm,
 } from "@/features/clinic/recovery-key-provider";
 
-/**
- * label -> scopedValue map for every pumped-fn form in the app, watched by the
- * dev-only PumpedDevtools "Forms" tab. Labels mirror each scopedValue's `name`.
- */
 export const formScopedValues: ScopedValueRegistry = {
   "sign-in": signInForm,
   "new-patient": newPatientForm,
