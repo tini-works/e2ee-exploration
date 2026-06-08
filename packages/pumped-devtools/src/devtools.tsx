@@ -4,23 +4,21 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { Lite } from "@pumped-fn/lite";
 import { usePumpedFeed } from "./use-pumped-feed";
-import { usePersistedState } from "./use-persisted-state";
+import { usePersistedState, usePersistedSize } from "./use-persisted-state";
 import type { AtomRegistry, ScopedValueRegistry } from "./types";
 import { S } from "./components/styles";
 import { StyleOnce } from "./components/style-once";
 import { Fab } from "./components/fab";
 import { Panel, type Tab } from "./components/panel";
 import {
-  nextSize,
-  SIZE_ORDER,
+  clampSize,
+  DEFAULT_SIZE,
   type DevtoolsSide,
-  type DevtoolsSize,
+  type PanelSize,
 } from "./components/sizes";
 
 const decodeSide = (raw: string): DevtoolsSide | undefined =>
   raw === "left" || raw === "right" ? raw : undefined;
-const decodeSize = (raw: string): DevtoolsSize | undefined =>
-  (SIZE_ORDER as string[]).includes(raw) ? (raw as DevtoolsSize) : undefined;
 const decodeTab = (raw: string): Tab | undefined =>
   raw === "state" || raw === "forms" || raw === "flow" ? raw : undefined;
 
@@ -33,8 +31,8 @@ export interface PumpedDevtoolsProps {
   title?: string;
   /** Bottom corner to dock to initially (toggle live from the header). Default "left". */
   side?: DevtoolsSide;
-  /** Initial UI size (cycle live from the header). Default "md". */
-  size?: DevtoolsSize;
+  /** Initial panel size, in px (drag the corner to resize live). */
+  size?: PanelSize;
   /** Flow ring-buffer size. Default 250. */
   maxEvents?: number;
   /** Start expanded. Default false. */
@@ -54,7 +52,7 @@ export function PumpedDevtools({
   scopedValues,
   title = "pumped-fn",
   side: initialSide = "left",
-  size: initialSize = "md",
+  size: initialSize = DEFAULT_SIZE,
   maxEvents,
   defaultOpen = false,
   scope,
@@ -82,10 +80,9 @@ export function PumpedDevtools({
     initialSide,
     decodeSide,
   );
-  const [size, setSize] = usePersistedState<DevtoolsSize>(
+  const [size, setSize] = usePersistedSize(
     `pumped-devtools:${title}:size`,
     initialSize,
-    decodeSize,
   );
   const [mounted, setMounted] = useState(false);
 
@@ -115,7 +112,7 @@ export function PumpedDevtools({
             onClear={clear}
             onClose={() => setOpen(false)}
             onSwapSide={() => setSide(side === "left" ? "right" : "left")}
-            onCycleSize={() => setSize(nextSize(size))}
+            onResize={(next) => setSize(clampSize(next))}
           />
         )}
         <Fab open={open} changes={state.totalChanges} onClick={() => setOpen(!open)} />

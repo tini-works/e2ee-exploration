@@ -15,7 +15,7 @@
  */
 export { PumpedDevtools } from "./devtools";
 export type { PumpedDevtoolsProps } from "./devtools";
-export type { DevtoolsSide, DevtoolsSize } from "./components/sizes";
+export type { DevtoolsSide, PanelSize } from "./components/sizes";
 
 // Lower-level surface, if you want to build your own UI on the same feed.
 export { usePumpedFeed } from "./use-pumped-feed";

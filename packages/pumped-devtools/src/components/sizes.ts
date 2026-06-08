@@ -1,18 +1,23 @@
-/** UI size presets for the panel. Cycled from the header, seeded by a prop. */
-export type DevtoolsSize = "sm" | "md" | "lg";
+/** Free-form panel dimensions, set by dragging the corner and persisted. */
+export interface PanelSize {
+  width: number;
+  height: number;
+}
 
-export const SIZES: Record<DevtoolsSize, { width: number; height: number; label: string }> = {
-  sm: { width: 320, height: 440, label: "S" },
-  md: { width: 384, height: 560, label: "M" },
-  lg: { width: 460, height: 680, label: "L" },
-};
+export const DEFAULT_SIZE: PanelSize = { width: 384, height: 560 };
 
-export const SIZE_ORDER: DevtoolsSize[] = ["sm", "md", "lg"];
+export const MIN_SIZE: PanelSize = { width: 280, height: 320 };
 
 export type DevtoolsSide = "left" | "right";
 
-/** Next value when cycling the size button. */
-export function nextSize(size: DevtoolsSize): DevtoolsSize {
-  const i = SIZE_ORDER.indexOf(size);
-  return SIZE_ORDER[(i + 1) % SIZE_ORDER.length];
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+/** Clamp a candidate size to the min and the current viewport. */
+export function clampSize({ width, height }: PanelSize): PanelSize {
+  const maxW = typeof window === "undefined" ? Infinity : window.innerWidth - 40;
+  const maxH = typeof window === "undefined" ? Infinity : window.innerHeight - 120;
+  return {
+    width: clamp(width, MIN_SIZE.width, Math.max(MIN_SIZE.width, maxW)),
+    height: clamp(height, MIN_SIZE.height, Math.max(MIN_SIZE.height, maxH)),
+  };
 }

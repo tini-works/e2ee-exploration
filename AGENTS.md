@@ -18,4 +18,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Features
 
-- IMPORTANT: Don't allow users to use functions if they have not entered correctly their recovery key
+- IMPORTANT: Don't allow users to use functions if they have not entered correctly their recovery key.
