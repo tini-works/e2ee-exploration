@@ -106,6 +106,36 @@ export const S = {
   body: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" },
   scroll: { flex: 1, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 8 },
 
+  // flow filter bar
+  filterBar: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, padding: "8px 10px", borderBottom: `1px solid ${T.border}` },
+  filterChip: {
+    padding: "2px 8px",
+    borderRadius: 20,
+    border: `1px solid ${T.border}`,
+    background: "transparent",
+    color: T.faint,
+    fontSize: 10.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    textTransform: "uppercase",
+    letterSpacing: ".03em",
+    fontFamily: sans,
+    opacity: 0.55,
+    transition: "all .12s",
+  },
+  filterSearch: {
+    flex: 1,
+    minWidth: 90,
+    padding: "4px 9px",
+    borderRadius: 8,
+    border: `1px solid ${T.border}`,
+    background: soft(T.fg, 4),
+    color: T.fg,
+    fontSize: 11.5,
+    fontFamily: mono,
+    outline: "none",
+  },
+
   // state rows
   atomRow: {
     textAlign: "left",
